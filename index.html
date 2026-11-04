@@ -80,10 +80,10 @@ const $=id=>document.getElementById(id);
 const TAU=Math.PI*2, WORLD={w:4200,h:2500}, STATION={x:3910,y:1210,r:148};
 const XROADS=[300,1050,1800,2550,3300,3900],YROADS=[310,755,1200,1660,2090];
 const CONFIG=[
- {name:'ЗиУ-682В №1177',desc:'Манёвренный · быстрый пулемёт',hp:230,speed:215,armor:0.9,len:115,mgRate:0.11,canonRate:1.65,color:'#7ed9dc',ammo:500,shells:30},
- {name:'ЗиУ-620501 №3279',desc:'Сочленённый · крепкий корпус',hp:340,speed:176,armor:0.78,len:178,mgRate:0.115,canonRate:1.7,color:'#d6b66d',ammo:550,shells:38},
- {name:'Троллейбус поддержки',desc:'Дальнобойная пушка',hp:285,speed:178,armor:0.85,len:132,mgRate:0.14,canonRate:1.18,color:'#80adf0',ammo:440,shells:50},
- {name:'Бронетроллейбус',desc:'Тяжёлая броня · низкая скорость',hp:480,speed:140,armor:0.58,len:138,mgRate:0.105,canonRate:2.2,color:'#9cbf8b',ammo:700,shells:42}
+ {name:'ЗиУ-682В №1177',desc:'Очень быстрый · 2 скорострельных пулемёта',hp:230,speed:322.5,armor:0.9,len:115,mgCount:2,hasCannon:false,mgRate:0.11,canonRate:1.65,color:'#7ed9dc',ammo:500,shells:0},
+ {name:'ЗиУ-620501 №3279',desc:'Медленный · 2 пулемёта спереди, пушка сзади',hp:340,speed:140,armor:0.78,len:178,mgCount:2,hasCannon:true,mgRate:0.115,canonRate:1.7,color:'#d6b66d',ammo:550,shells:38},
+ {name:'Троллейбус поддержки',desc:'1 пулемёт · лечит ближайших союзников',hp:285,speed:178,armor:0.85,len:132,mgCount:1,hasCannon:false,healRate:8,healRadius:230,mgRate:0.14,canonRate:1.18,color:'#80adf0',ammo:440,shells:0},
+ {name:'Бронетроллейбус',desc:'1 пушка · броня втрое сильнее первого',hp:480,speed:140,armor:0.3,len:138,mgCount:0,hasCannon:true,mgRate:0.105,canonRate:2.2,color:'#9cbf8b',ammo:0,shells:42}
 ];
 let selected=0,mode='menu',player=null,allies=[],enemies=[],shots=[],fx=[],buildings=[],wrecks=[],loot=[],waves=0,waveWait=0,spawnQueue=0,spawnCooldown=0,missionRetreat=false,allyLosses=0,earned=160,kills=0,gameTime=0,clock=0,cam={x:1800,y:1200},zoom=1,W=0,H=0,DPR=1,lastFrame=0,damageFlash=0,noticeTTL=0,keys={},aimPointer=null,joystickID=null,joy={x:0,y:0},firingMG=false,firingCannon=false,stationFlare=0;
 let lastUI=0,hasStarted=false;
@@ -106,26 +106,44 @@ function buildCity(){buildings=[];let seed=17;const random=()=>{seed=(seed*16645
   }
  }
 }
-function newVehicle(spec,x,y,side='ally',extra={}){return {x,y,prevX:x,prevY:y,dir:-Math.PI/2,rearDir:-Math.PI/2,turret:0,side,shape:spec.len>165?'articulated':'single',len:spec.len,color:spec.color,hp:spec.hp,maxHp:spec.hp,speed:spec.speed,armor:spec.armor,mgRate:spec.mgRate,canonRate:spec.canonRate,mgCD:0,canonCD:0,mag:spec.ammo||400,shells:spec.shells||30,maxMag:spec.ammo||400,maxShells:spec.shells||30,energy:100,wheel:100,engine:100,wire:100,lastTurn:0,alive:true,think:rnd(.1,1),target:null, ...extra}}
+function newVehicle(spec,x,y,side='ally',extra={}){return {x,y,prevX:x,prevY:y,dir:-Math.PI/2,rearDir:-Math.PI/2,turret:0,side,shape:spec.len>165?'articulated':'single',len:spec.len,color:spec.color,hp:spec.hp,maxHp:spec.hp,speed:spec.speed,armor:spec.armor,mgRate:spec.mgRate,canonRate:spec.canonRate,mgCount:spec.mgCount,hasCannon:spec.hasCannon,healRate:spec.healRate||0,healRadius:spec.healRadius||0,mgCD:0,canonCD:0,mag:spec.ammo??400,shells:spec.shells??30,maxMag:spec.ammo??400,maxShells:spec.shells??30,energy:100,wheel:100,engine:100,wire:100,lastTurn:0,alive:true,think:rnd(.1,1),target:null, ...extra}}
 function startGame(){let cfg=CONFIG[selected];buildCity();wrecks=[];loot=[];shots=[];fx=[];enemies=[];allies=[];waves=0;spawnQueue=0;spawnCooldown=0;waveWait=0;allyLosses=0;earned=160;kills=0;gameTime=0;missionRetreat=false;damageFlash=0;
- player=newVehicle(cfg,1965,1200,'player');player.dir=0;player.turret=0;cam.x=player.x;cam.y=player.y;
- for(let i=0;i<5;i++){const base=CONFIG[i%4],al=newVehicle({...base,hp:180+65*(i%3),speed:145+10*(i%3),ammo:9999,shells:9999},1450+(i%3)*190,1010+(i>>1)*120,'ally',{dir:Math.PI/2,mag:9999,shells:9999});allies.push(al)}
+ player=newVehicle(cfg,1965,1200,'player');player.dir=0;player.rearDir=0;player.turret=0;cam.x=player.x;cam.y=player.y;
+ for(let i=0;i<5;i++){const base=CONFIG[i%4],al=newVehicle({...base,hp:180+65*(i%3),speed:145+10*(i%3),ammo:9999,shells:9999},1450+(i%3)*190,1010+(i>>1)*120,'ally',{dir:Math.PI/2,rearDir:Math.PI/2,mag:9999,shells:9999});allies.push(al)}
  document.querySelectorAll('.overlay').forEach(e=>e.hidden=true);mode='play';hasStarted=true;firingMG=firingCannon=false;joy.x=joy.y=0;onJoyMove(0,0);nextWave();toast('ОБОРОНА НАЧАЛАСЬ — ДЕРЖИТЕ ШКОЛЬНУЮ!',3);updateUI(true)}
 function nextWave(){waves++;spawnQueue=clamp(4+waves*3,7,24);spawnCooldown=0;waveWait=3;toast('ВОЛНА '+waves+' — МАРШРУТКИ НАСТУПАЮТ!',2.8)}
 function spawnEnemy(){let sides=[{x:rnd(80,390),y:rnd(900,1460)},{x:rnd(3700,4140),y:rnd(850,1500)},{x:rnd(800,3100),y:210},{x:rnd(850,3300),y:2290}],p=pick(sides);if(dist(p,player)<570)p={x:3820,y:rnd(900,1500)};
- let kind=Math.random()<(0.15+Math.min(.22,waves*.015))?'armored':Math.random()<.25?'rammer':Math.random()<.5?'flank':'basic';
- const data={basic:{hp:70,speed:106,dmg:9,color:'#e6a15c',length:58,reward:28},flank:{hp:51,speed:157,dmg:8,color:'#e97f7e',length:53,reward:35},armored:{hp:175,speed:76,dmg:15,color:'#a88777',length:69,reward:50},rammer:{hp:65,speed:184,dmg:9,color:'#f2ba64',length:54,reward:32}}[kind];
- enemies.push({...p,dir:0,turret:0,kind,side:'enemy',alive:true,hp:data.hp,maxHp:data.hp,speed:data.speed,dmg:data.dmg,color:data.color,len:data.length,reward:data.reward,shootCD:rnd(.8,2),brain:rnd(.2,.8),target:null,ramCD:0,armor:kind==='armored'?.75:1,flankSign:Math.random()<.5?-1:1})}
-function fireShot(from,type){if(!from.alive)return false;const isPlayer=from===player;if(type==='mg'){
- if(from.mgCD>0||(isPlayer&&from.mag<=0))return false;from.mgCD=from.mgRate;if(isPlayer)from.mag--;
- }else{if(from.canonCD>0||(isPlayer&&from.shells<=0))return false;from.canonCD=from.canonRate;if(isPlayer)from.shells--}
- const ang=from.turret+(Math.random()-.5)*(type==='mg'?.045:.017);
- const muzzle=from.len*.28+17;
- const speed=type==='mg'?900:640,damage=type==='mg'?10:55;
- shots.push({x:from.x+Math.cos(ang)*muzzle,y:from.y+Math.sin(ang)*muzzle,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:type==='mg'?.95:1.65,type,damage,source:from.side,owner:from,r:type==='mg'?3:7});
- makeFX(from.x+Math.cos(ang)*muzzle,from.y+Math.sin(ang)*muzzle,type==='mg'?'#fff0b3':'#ffc36f',type==='mg'?2:7,1.5);
- if(shots.length>270)shots.splice(0,shots.length-270);
- return true}
+ const kinds=['basic','flank','rammer','cannon','missile','flame','quad','heavy'];const kind=pick(kinds);
+ const data={
+  basic:{hp:70,speed:106,dmg:9,color:'#e6a15c',length:58,reward:28,armor:1},
+  flank:{hp:51,speed:157,dmg:8,color:'#e97f7e',length:53,reward:35,armor:1},
+  rammer:{hp:65,speed:184,dmg:9,color:'#f2ba64',length:54,reward:32,armor:1},
+  cannon:{hp:115,speed:92,dmg:42,color:'#b8764e',length:65,reward:50,armor:.9},
+  missile:{hp:85,speed:85,dmg:62,color:'#aa79a9',length:65,reward:60,armor:1},
+  flame:{hp:110,speed:127,dmg:5,color:'#e05e3e',length:60,reward:50,armor:.9},
+  quad:{hp:100,speed:105,dmg:6,color:'#c6a24e',length:61,reward:55,armor:.9},
+  heavy:{hp:260,speed:65,dmg:4,color:'#626f78',length:72,reward:70,armor:.3}
+ }[kind];
+ enemies.push({...p,prevX:p.x,prevY:p.y,dir:0,turret:0,kind,side:'enemy',alive:true,hp:data.hp,maxHp:data.hp,speed:data.speed,dmg:data.dmg,color:data.color,len:data.length,reward:data.reward,shootCD:rnd(.8,2),target:null,ramCD:0,armor:data.armor,flankSign:Math.random()<.5?-1:1})}
+function fireShot(from,type){if(!from.alive)return false;const isPlayer=from===player,mg=type==='mg';
+ if(mg){if(!from.mgCount||from.mgCD>0||(isPlayer&&from.mag<=0))return false;from.mgCD=from.mgRate}
+ else{if(!from.hasCannon||from.canonCD>0||(isPlayer&&from.shells<=0))return false;from.canonCD=from.canonRate;if(isPlayer)from.shells--}
+ const count=mg?Math.min(from.mgCount,isPlayer?from.mag:from.mgCount):1;if(isPlayer&&mg)from.mag-=count;
+ let baseX=from.x,baseY=from.y;
+ if(type==='cannon'&&from.shape==='articulated'){const pivot=-from.len*.07; baseX+=Math.cos(from.dir)*pivot-Math.cos(from.rearDir)*from.len*.25;baseY+=Math.sin(from.dir)*pivot-Math.sin(from.rearDir)*from.len*.25}
+ else if(mg&&from.shape==='articulated'){baseX+=Math.cos(from.dir)*from.len*.19;baseY+=Math.sin(from.dir)*from.len*.19}
+ for(let i=0;i<count;i++){const ang=from.turret+(Math.random()-.5)*(mg?.045:.017),offset=(i-(count-1)/2)*14,muzzle=mg?20:27;
+  const x=baseX+Math.cos(ang)*muzzle-Math.sin(ang)*offset,y=baseY+Math.sin(ang)*muzzle+Math.cos(ang)*offset,speed=mg?900:640;
+  shots.push({x,y,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:mg?.95:1.65,type,damage:mg?10:55,source:from.side,owner:from,r:mg?3:7});makeFX(x,y,mg?'#fff0b3':'#ffc36f',mg?2:7,1.5)}
+ if(shots.length>400)shots.splice(0,shots.length-400);return true}
+function fireEnemy(e,target){if(e.kind==='rammer')return;const d=dist(e,target),range=e.kind==='flame'?190:e.kind==='missile'?680:480;if(d>range||e.shootCD>0)return;
+ const cooldown={basic:1.7,flank:1.7,heavy:2.1,cannon:2.3,missile:3.8,flame:.12,quad:.42};e.shootCD=cooldown[e.kind]||1.7;
+ const count=e.kind==='quad'?4:1;
+ for(let i=0;i<count;i++){const ang=e.turret+rnd(e.kind==='flame'?-.16:-.05,e.kind==='flame'?.16:.05)+(i-(count-1)/2)*.035;
+  const type=e.kind==='cannon'?'enemyCannon':e.kind==='missile'?'missile':e.kind==='flame'?'flame':'enemy';const speed=type==='missile'?300:type==='flame'?270:type==='enemyCannon'?500:460;
+  shots.push({x:e.x+Math.cos(ang)*25,y:e.y+Math.sin(ang)*25,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:type==='missile'?2.9:type==='flame'?.7:1.35,type,damage:e.dmg,source:'enemy',owner:e,target,r:type==='flame'?7:type==='missile'?7:4})}
+}
+function healNearby(o,dt){if(!o.alive||!o.healRate)return;for(const ally of [player,...allies])if(ally!==o&&ally.alive&&dist(o,ally)<o.healRadius&&ally.hp<ally.maxHp){ally.hp=Math.min(ally.maxHp,ally.hp+o.healRate*dt);if(Math.random()<dt*2)makeFX(ally.x,ally.y,'#83ffc0',2,.45)}}
 function makeFX(x,y,color,n=7,scale=1){for(let i=0;i<n&&fx.length<240;i++){let ang=rnd(0,TAU),speed=rnd(20,170)*scale,life=rnd(.22,.75);fx.push({x,y,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:life,max:life,r:rnd(2,6)*scale,color})}}
 function explosion(x,y,r=58,damage=0,source='neutral'){
  makeFX(x,y,'#ffa744',20,1.6);makeFX(x,y,'#545e63',12,1.1);fx.push({x,y,vx:0,vy:0,ttl:.32,max:.32,r:r*.48,color:'#ffc76d',ring:true});
@@ -170,6 +188,7 @@ function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0
  if(missionRetreat&&dist(player,STATION)<STATION.r+35){finish(true);return}
  const jx=joy.x+(keys['a']||keys['ArrowLeft']?-1:0)+(keys['d']||keys['ArrowRight']?1:0),jy=joy.y+(keys['w']||keys['ArrowUp']?-1:0)+(keys['s']||keys['ArrowDown']?1:0);
  move(player,clamp(jx,-1,1),clamp(jy,-1,1),dt);
+ healNearby(player,dt);for(const ally of allies)healNearby(ally,dt);
  player.mgCD=Math.max(0,player.mgCD-dt);player.canonCD=Math.max(0,player.canonCD-dt);
  if(firingMG||keys['j']||keys['J'])fireShot(player,'mg');
  if(firingCannon||keys[' ']||keys['k']||keys['K'])fireShot(player,'cannon');
@@ -182,21 +201,19 @@ function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0
   let t=player,best=dist(e,player);for(const a of allies)if(a.alive){let d=dist(e,a);if(d<best*.88){t=a;best=d}}
   e.target=t;let dx=t.x-e.x,dy=t.y-e.y;let d=Math.hypot(dx,dy);
   if(e.kind==='flank'&&d>100){let phi=Math.atan2(dy,dx)+e.flankSign*.57;dx=Math.cos(phi)*d;dy=Math.sin(phi)*d}
-  if(e.kind==='armored'&&d<250){dx=dy=0}
+  if((e.kind==='heavy'||e.kind==='cannon'||e.kind==='missile')&&d<(e.kind==='missile'?430:250)){dx=dy=0}
   move(e,dx,dy,dt,e.kind==='rammer'&&d<430?1.23:1);
   e.turret=angle(e,t);
-  if(d<480&&e.shootCD<=0&&e.kind!=='rammer'){
-   e.shootCD=e.kind==='armored'?1.3:1.7;
-   const aa=e.turret+rnd(-.13,.13),sp=460;shots.push({x:e.x+Math.cos(aa)*20,y:e.y+Math.sin(aa)*20,vx:Math.cos(aa)*sp,vy:Math.sin(aa)*sp,ttl:1.05,type:'enemy',damage:e.dmg,source:'enemy',owner:e,r:4})}
+  fireEnemy(e,t);
   if(d<47&&e.ramCD<=0){e.ramCD=1.3;hurt(t,e.kind==='rammer'?33:15,'enemy');hurt(e,e.kind==='rammer'?30:12,'player');makeFX(e.x,e.y,'#fff2c7',9,1)}
  }
- for(let i=shots.length-1;i>=0;i--){let s=shots[i];s.ttl-=dt;s.x+=s.vx*dt;s.y+=s.vy*dt;
+ for(let i=shots.length-1;i>=0;i--){let s=shots[i];s.ttl-=dt;if(s.type==='missile'&&s.target&&s.target.alive){const a=Math.atan2(s.vy,s.vx),goal=angle(s,s.target),delta=Math.atan2(Math.sin(goal-a),Math.cos(goal-a)),next=a+clamp(delta,-1.5*dt,1.5*dt),sp=Math.hypot(s.vx,s.vy);s.vx=Math.cos(next)*sp;s.vy=Math.sin(next)*sp} s.x+=s.vx*dt;s.y+=s.vy*dt;
   if(s.ttl<=0||s.x<0||s.x>WORLD.w||s.y<0||s.y>WORLD.h){shots.splice(i,1);continue}
   const b=hitsBuilding(s.x,s.y,s.r);
-  if(b){damageBuilding(b,s.type==='cannon'?80:8);if(s.type==='cannon')explosion(s.x,s.y,93,45,s.source);else makeFX(s.x,s.y,'#cbb78b',4,.5);shots.splice(i,1);continue}
+  if(b){const explosive=['cannon','enemyCannon','missile'].includes(s.type);damageBuilding(b,explosive?80:8);if(explosive)explosion(s.x,s.y,s.type==='missile'?75:93,s.type==='missile'?s.damage:45,s.source);else makeFX(s.x,s.y,s.type==='flame'?'#ff8130':'#cbb78b',4,.5);shots.splice(i,1);continue}
   const targets=s.source==='enemy'?[player,...allies]:enemies;let hit=null;
   for(const t of targets)if(t.alive&&dist(s,t)<(s.type==='cannon'?25:21)){hit=t;break}
-  if(hit){if(s.type==='cannon')explosion(s.x,s.y,100,85,s.source);else{hurt(hit,s.damage,s.source);makeFX(s.x,s.y,'#ffd598',3,.5)}shots.splice(i,1)}
+  if(hit){if(['cannon','enemyCannon','missile'].includes(s.type))explosion(s.x,s.y,s.type==='missile'?75:100,s.type==='cannon'?85:s.damage,s.source);else{hurt(hit,s.damage,s.source);makeFX(s.x,s.y,s.type==='flame'?'#ff8130':'#ffd598',3,.5)}shots.splice(i,1)}
  }
  for(let i=loot.length-1;i>=0;i--){const l=loot[i];l.life-=dt;if(l.life<=0){loot.splice(i,1);continue}if(dist(l,player)<65){earned+=l.value;makeFX(l.x,l.y,'#d5fa89',5,.5);loot.splice(i,1)}}
  for(let i=fx.length-1;i>=0;i--){const p=fx[i];p.ttl-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.975;p.vy*=.975;if(p.ttl<=0)fx.splice(i,1)}
@@ -213,8 +230,8 @@ function updateUI(){if(!player)return;
  $('mission').style.color=missionRetreat?'#ffa37c':'#f7e5bf';
  $('hpFill').style.width=(Math.max(0,player.hp/player.maxHp*100)).toFixed(1)+'%';$('hpFill').style.background=player.hp/player.maxHp<.33?'#eb6666':'#5edb91';
  $('hpText').textContent=Math.max(0,Math.ceil(player.hp/player.maxHp*100))+'%';$('energyFill').style.width=Math.floor(player.energy)+'%';$('energyText').textContent=Math.floor(player.energy)+'%';
- $('ammunition').textContent='Пулемёт: '+player.mag+' · Снаряды: '+player.shells;
- $('mgCount').textContent=player.mag;$('shellCount').textContent=player.shells;
+ $('ammunition').textContent='Пулемёты: '+(player.mgCount?player.mag:'нет')+' · Пушка: '+(player.hasCannon?player.shells:'нет');
+ $('mgCount').textContent=player.mgCount?player.mag:'НЕТ';$('shellCount').textContent=player.hasCannon?player.shells:'НЕТ';
  $('repairBtn').style.opacity=earned<70?'.5':'1';$('supplyBtn').style.opacity=earned<85?'.5':'1'
 }
 function worldToScreen(x,y){return {x:(x-cam.x)*zoom+W/2,y:(y-cam.y)*zoom+H/2}}
@@ -259,11 +276,13 @@ function drawVehicle(o){let x=o.x,y=o.y;if(!viewable(x,y,o.len+40,o.len+40))retu
   rect(cx+len/2-11,-width/2+6,7,width-12,enemy?'#fff0a4':'#a6e7f1');rect(cx-len/2+5,-width/2+5,6,width-10,'#ef7264')}
  if(o.shape==='articulated'){const pivot=-L*.07,bend=Math.atan2(Math.sin(o.rearDir-o.dir),Math.cos(o.rearDir-o.dir));ctx.save();ctx.translate(pivot,0);ctx.rotate(bend);car(-L*.25,L*.50,B*.98,colorBlend(o.color,'#22333b',.18));ctx.restore();ctx.save();ctx.translate(pivot,0);ctx.rotate(bend*.5);rect(-12,-B*.40,24,B*.80,'#3e454c');for(let i=0;i<6;i++)line(-10+i*4,-B*.40,-10+i*4,B*.40,'#141f25',2);ctx.restore();car(L*.19,L*.52,B,o.color)}
  else car(0,L,B,o.color);
- if(enemy){ctx.fillStyle='#fff4bb';ctx.font='bold 10px system-ui';ctx.fillText('M',-2,4)}
+ if(enemy){ctx.fillStyle='#fff4bb';ctx.font='bold 10px system-ui';ctx.fillText(({cannon:'П',missile:'ПТУР',flame:'О',quad:'4П',heavy:'Б'}[o.kind]||'М'),-8,4)}
  else{line(-L*.13,-10,-L*.33,-20,'#343c41',3);line(-L*.13,10,-L*.33,20,'#343c41',3);circle(-L*.33,-20,3,'#c4c9ba');circle(-L*.33,20,3,'#c4c9ba')}
  ctx.restore();
- // turret follows independent aim
- if(!enemy){ctx.save();ctx.translate(x,y);ctx.rotate(o.turret);circle(0,0,13,'#162630');circle(0,0,9,'#a1b4b8');rect(4,-4,32,8,'#182f41');rect(4,-1,30,2,'#d3d6c7');ctx.restore()}
+ // Mounted weapons follow aim; the articulated cannon sits on the rear section.
+ if(!enemy){const mounts=[];if(o.mgCount){const front=o.shape==='articulated'?L*.19:0;for(let i=0;i<o.mgCount;i++)mounts.push({x:Math.cos(o.dir)*front-Math.sin(o.dir)*(i-(o.mgCount-1)/2)*14,y:Math.sin(o.dir)*front+Math.cos(o.dir)*(i-(o.mgCount-1)/2)*14,cannon:false})}
+  if(o.hasCannon){const rear=o.shape==='articulated'?-L*.25:0,pivot=o.shape==='articulated'?-L*.07:0;mounts.push({x:Math.cos(o.dir)*pivot+Math.cos(o.rearDir)*rear,y:Math.sin(o.dir)*pivot+Math.sin(o.rearDir)*rear,cannon:true})}
+  for(const m of mounts){ctx.save();ctx.translate(x+m.x,y+m.y);ctx.rotate(o.turret);circle(0,0,m.cannon?11:8,'#162630');circle(0,0,m.cannon?7:5,'#a1b4b8');rect(4,m.cannon?-4:-2,m.cannon?32:22,m.cannon?8:4,'#182f41');ctx.restore()}}
  else{ctx.save();ctx.translate(x,y);ctx.rotate(o.turret);rect(-3,-2,20,4,'#2a2829');ctx.restore()}
  // health indication
  if(o.hp<o.maxHp||enemy){let ratio=clamp(o.hp/o.maxHp,0,1);rect(x-27,y-o.len*.28-15,54,5,'#221c1f');rect(x-27,y-o.len*.28-15,54*ratio,5,enemy?'#ee7c65':'#78e2bd')}
@@ -277,7 +296,7 @@ function render(){if(!player){ctx.setTransform(DPR,0,0,DPR,0,0);rect(0,0,W,H,'#1
  for(const a of allies)if(a.alive)drawVehicle(a);
  for(const e of enemies)drawVehicle(e);
  if(player.alive)drawVehicle(player);
- for(const s of shots){if(!viewable(s.x,s.y,40,40))continue;let a=Math.atan2(s.vy,s.vx);if(s.type==='cannon'){circle(s.x,s.y,9,'#ef8629');circle(s.x,s.y,5,'#ffffb1')}else{line(s.x-Math.cos(a)*9,s.y-Math.sin(a)*9,s.x,s.y,s.type==='enemy'?'#ff8a6c':'#fff3b7',s.type==='enemy'?3:2)}}
+ for(const s of shots){if(!viewable(s.x,s.y,40,40))continue;let a=Math.atan2(s.vy,s.vx);if(['cannon','enemyCannon','missile','flame'].includes(s.type)){circle(s.x,s.y,s.type==='flame'?7:9,s.type==='missile'?'#d98bff':'#ef8629');circle(s.x,s.y,4,'#ffffb1')}else{line(s.x-Math.cos(a)*9,s.y-Math.sin(a)*9,s.x,s.y,s.source==='enemy'?'#ff8a6c':'#fff3b7',s.source==='enemy'?3:2)}}
  for(const p of fx){let alpha=clamp(p.ttl/p.max,0,1);ctx.globalAlpha=alpha;if(p.ring){ctx.strokeStyle=p.color;ctx.lineWidth=4;ctx.beginPath();ctx.arc(p.x,p.y,p.r*(2-alpha),0,TAU);ctx.stroke()}else circle(p.x,p.y,p.r*alpha+.4,p.color);ctx.globalAlpha=1}
  // aiming crosshair in world
  if(player.alive){const ox=player.x+Math.cos(player.turret)*280,oy=player.y+Math.sin(player.turret)*280;outline(ox,oy,14,'#ffe19d',2);line(ox-21,oy,ox-6,oy,'#ffe19d',2);line(ox+6,oy,ox+21,oy,'#ffe19d',2);line(ox,oy-21,ox,oy-6,'#ffe19d',2);line(ox,oy+6,ox,oy+21,'#ffe19d',2)}
