@@ -29,8 +29,8 @@ button{font:inherit;border:0;color:var(--text);touch-action:none;cursor:pointer}
 #controls{position:absolute;inset:0;pointer-events:none}
 #joystick{pointer-events:auto;touch-action:none;position:absolute;bottom:calc(17px + env(safe-area-inset-bottom));left:calc(24px + env(safe-area-inset-left));width:148px;height:148px;border-radius:50%;background:radial-gradient(circle,#153e50af 0 35%,#21435999 36%,#0b263e99 70%);border:2px solid #73ccdb55;box-shadow:inset 0 0 21px #7abed025,0 6px 26px #0008;display:grid;place-items:center}
 #joyKnob{width:62px;height:62px;border-radius:50%;background:radial-gradient(circle at 28% 24%,#81d9e8,#22627e 70%);box-shadow:0 4px 12px #000b;border:2px solid #b8eff3b8;transform:translate(0,0)}
-#buttonArea{pointer-events:auto;position:absolute;right:calc(17px + env(safe-area-inset-right));bottom:calc(17px + env(safe-area-inset-bottom));display:flex;gap:9px;align-items:flex-end}
-#auxButtons{display:flex;flex-direction:column;gap:8px;margin-right:4px}
+#buttonArea{pointer-events:none;position:absolute;right:calc(17px + env(safe-area-inset-right));bottom:calc(17px + env(safe-area-inset-bottom));display:flex;gap:9px;align-items:flex-end}
+#auxButtons{pointer-events:auto;display:flex;flex-direction:column;gap:8px;margin-right:4px}
 .action{display:grid;place-items:center;align-content:center;border-radius:50%;border:2px solid #b5edf099;background:linear-gradient(145deg,#22728caa,#0b2e49ef);box-shadow:0 4px 14px #0009;white-space:nowrap;font-weight:900}
 .action span{font-size:11px;letter-spacing:.04em}.action small{font-size:10px;opacity:.85}
 #mg{width:100px;height:100px;border-color:#68e7f3;color:#e8fcff}
@@ -65,9 +65,9 @@ h1{font-size:clamp(23px,4vw,34px);line-height:1.1;margin:0 0 7px}h2{font-size:20
  <div id="topRight"><button class="smallButton" id="mapBtn" aria-label="Карта">▤</button><button class="smallButton" id="pauseBtn" aria-label="Пауза">Ⅱ</button></div>
  <div id="leftStatus" class="panel"><div class="barLabel"><span>КУЗОВ / ДВИГАТЕЛЬ</span><b id="hpText">100%</b></div><div class="meter"><div id="hpFill"></div></div><div class="barLabel"><span>ЗАРЯД БЕЗ ПРОВОДОВ</span><b id="energyText">100%</b></div><div class="meter"><div id="energyFill"></div></div><div id="ammunition">Пулемёт: 400 · Снаряды: 36</div></div>
  <div id="msg"></div>
- <div id="controls"><div id="joystick"><div id="joyKnob"></div></div><div id="buttonArea"><div id="auxButtons"><button class="action" id="repairBtn"><span>🔧</span><span>РЕМОНТ</span></button><button class="action" id="supplyBtn"><span>▣</span><span>ЗАПАСЫ</span></button></div><button class="action" id="cannon"><span>💥</span><span>ПУШКА</span><small id="shellCount">36</small></button><button class="action" id="mg"><span>✦ ✦ ✦</span><span>ПУЛЕМЁТ</span><small id="mgCount">400</small></button></div><div id="aimHint">Проведите пальцем по полю — прицел • слева — движение</div></div>
+ <div id="controls"><div id="joystick"><div id="joyKnob"></div></div><div id="buttonArea"><div id="auxButtons"><button class="action" id="repairBtn"><span>🔧</span><span>РЕМОНТ</span></button><button class="action" id="supplyBtn"><span>▣</span><span>ЗАПАСЫ</span></button></div><div class="action" id="cannon" aria-label="Снаряды"><span>💥</span><span>ПУШКА</span><small id="shellCount">36</small></div><div class="action" id="mg" aria-label="Патроны"><span>✦ ✦ ✦</span><span>ПУЛЕМЁТ</span><small id="mgCount">400</small></div></div><div id="aimHint">Коснитесь поля — прицел и огонь • слева — движение</div></div>
 </div>
-<div class="overlay" id="startModal"><div class="menu"><h1>Оборона улицы Школьной</h1><p class="sub">Мобильное переосмысление первого эпизода. Выберите троллейбус, удерживайте улицу вместе с союзниками и после потери трёх машин прорывайтесь к вокзалу.</p><div id="choices"></div><button id="startBtn" class="primary">НАЧАТЬ ОБОРОНУ</button><div class="info">Управление: левый круг — ход и повороты; касание и движение по карте — прицел; удерживание кнопок — огонь. Ремонт и боеприпасы покупаются за очки снабжения, получаемые за уничтоженные маршрутки. Рекомендуется горизонтальная ориентация.</div></div></div>
+<div class="overlay" id="startModal"><div class="menu"><h1>Оборона улицы Школьной</h1><p class="sub">Мобильное переосмысление первого эпизода. Выберите троллейбус, удерживайте улицу вместе с союзниками и после потери трёх машин прорывайтесь к вокзалу.</p><div id="choices"></div><button id="startBtn" class="primary">НАЧАТЬ ОБОРОНУ</button><div class="info">Управление: левый круг — ход и повороты; касание и удержание на поле — прицел и огонь из всего оружия. Ремонт и боеприпасы покупаются за очки снабжения, получаемые за уничтоженные маршрутки. Рекомендуется горизонтальная ориентация.</div></div></div>
 <div class="overlay" id="pauseModal" hidden><div class="menu" style="max-width:440px"><h2>Пауза</h2><p class="sub">Оборона улицы Школьной приостановлена.</p><button class="primary" id="resumeBtn">ПРОДОЛЖИТЬ</button><button class="primary" id="restartBtn" style="margin-top:9px;background:#324a5a">ВЫБРАТЬ ДРУГОЙ ТРОЛЛЕЙБУС</button></div></div>
 <div class="overlay" id="mapModal" hidden><div class="menu"><h2>Схема района</h2><p class="sub">Голубой — ваш троллейбус; зелёные — союзники; красные — маршрутки; жёлтая зона — вокзал.</p><canvas id="mapCanvas" class="mapCanvas" width="620" height="330"></canvas><button id="mapClose" class="primary" style="margin-top:10px">ВЕРНУТЬСЯ К БОЮ</button></div></div>
 <div class="overlay" id="endModal" hidden><div class="menu" style="max-width:480px"><h1 id="endTitle">Бой завершён</h1><p id="endDesc" class="sub"></p><div id="endStats"></div><button class="primary" id="againBtn" style="margin-top:12px">ИГРАТЬ СНОВА</button></div></div>
@@ -106,7 +106,7 @@ function buildCity(){buildings=[];let seed=17;const random=()=>{seed=(seed*16645
   }
  }
 }
-function newVehicle(spec,x,y,side='ally',extra={}){return {x,y,prevX:x,prevY:y,dir:-Math.PI/2,turret:0,side,shape:spec.len>165?'articulated':'single',len:spec.len,color:spec.color,hp:spec.hp,maxHp:spec.hp,speed:spec.speed,armor:spec.armor,mgRate:spec.mgRate,canonRate:spec.canonRate,mgCD:0,canonCD:0,mag:spec.ammo||400,shells:spec.shells||30,maxMag:spec.ammo||400,maxShells:spec.shells||30,energy:100,wheel:100,engine:100,wire:100,lastTurn:0,alive:true,think:rnd(.1,1),target:null, ...extra}}
+function newVehicle(spec,x,y,side='ally',extra={}){return {x,y,prevX:x,prevY:y,dir:-Math.PI/2,rearDir:-Math.PI/2,turret:0,side,shape:spec.len>165?'articulated':'single',len:spec.len,color:spec.color,hp:spec.hp,maxHp:spec.hp,speed:spec.speed,armor:spec.armor,mgRate:spec.mgRate,canonRate:spec.canonRate,mgCD:0,canonCD:0,mag:spec.ammo||400,shells:spec.shells||30,maxMag:spec.ammo||400,maxShells:spec.shells||30,energy:100,wheel:100,engine:100,wire:100,lastTurn:0,alive:true,think:rnd(.1,1),target:null, ...extra}}
 function startGame(){let cfg=CONFIG[selected];buildCity();wrecks=[];loot=[];shots=[];fx=[];enemies=[];allies=[];waves=0;spawnQueue=0;spawnCooldown=0;waveWait=0;allyLosses=0;earned=160;kills=0;gameTime=0;missionRetreat=false;damageFlash=0;
  player=newVehicle(cfg,1965,1200,'player');player.dir=0;player.turret=0;cam.x=player.x;cam.y=player.y;
  for(let i=0;i<5;i++){const base=CONFIG[i%4],al=newVehicle({...base,hp:180+65*(i%3),speed:145+10*(i%3),ammo:9999,shells:9999},1450+(i%3)*190,1010+(i>>1)*120,'ally',{dir:Math.PI/2,mag:9999,shells:9999});allies.push(al)}
@@ -142,7 +142,7 @@ function hurt(o,dmg,source){if(!o.alive)return;let amt=dmg*(o.armor||1);o.hp-=am
   if(allyLosses>=3&&!missionRetreat){missionRetreat=true;toast('ПРИКАЗ: ОТСТУПИТЬ К ВОКЗАЛУ!',5)}
  }else if(o===player)finish(false)
  }}
-function finish(win){if(mode!=='play')return;mode='ended';firingMG=firingCannon=false;
+function finish(win){if(mode!=='play')return;mode='ended';firingMG=firingCannon=false;aimPointer=null;
  $('endModal').hidden=false;$('endTitle').textContent=win?'Отступление выполнено!':'Троллейбус уничтожен';
  $('endDesc').textContent=win?'Вы прорвались к вокзалу после потери трёх союзных машин. Улица Школьная оставлена, отряд продолжит борьбу.':'Оборона Школьной прервана. Маршрутки продолжают наступление.';
  $('endStats').innerHTML='Отражено волн: <b>'+waves+'</b><br>Уничтожено маршруток: <b>'+kills+'</b><br>Время обороны: <b>'+Math.floor(gameTime/60)+' мин '+Math.floor(gameTime%60)+' сек</b><br>Выжило союзников: <b>'+allies.filter(a=>a.alive).length+'</b>';
@@ -162,6 +162,8 @@ function move(o,dx,dy,dt,mul=1){let speed=o.speed*mul;if(o===player){if(!nearWir
  const b=hitsBuilding(nx,ny,rad);
  if(b){if(!hitsBuilding(o.x+vx,o.y,rad))o.x=nx;else if(!hitsBuilding(o.x,o.y+vy,rad))o.y=ny;else if(o.side==='enemy'&&o.kind==='rammer'){damageBuilding(b,dt*22)}
  }else{o.x=nx;o.y=ny}
+ if(o.shape==='articulated'){const traveled=Math.hypot(o.x-o.prevX,o.y-o.prevY);const bend=Math.atan2(Math.sin(o.dir-o.rearDir),Math.cos(o.dir-o.rearDir));o.rearDir+=Math.sin(bend)*Math.min(1,traveled/(o.len*.31));const diff=Math.atan2(Math.sin(o.rearDir-o.dir),Math.cos(o.rearDir-o.dir));o.rearDir=o.dir+clamp(diff,-.85,.85)}
+ o.prevX=o.x;o.prevY=o.y;
 }
 function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0,damageFlash-dt*.4);
  if(noticeTTL>0){noticeTTL-=dt;if(noticeTTL<=0)$('msg').style.opacity='0'}
@@ -255,7 +257,7 @@ function drawVehicle(o){let x=o.x,y=o.y;if(!viewable(x,y,o.len+40,o.len+40))retu
   for(const side of [-1,1]){rect(cx-len*.31,side*(width/2+1)-4,len*.13,8,'#1a242b');rect(cx+len*.23,side*(width/2+1)-4,len*.13,8,'#1a242b')}
   if(windows){for(let i=-1;i<=2;i++){rect(cx-len*.31+i*len*.15,-width*.36,len*.1,width*.72,'#1c4453');rect(cx-len*.30+i*len*.15,-width*.33,len*.08,4,'#5e9bab')}}
   rect(cx+len/2-11,-width/2+6,7,width-12,enemy?'#fff0a4':'#a6e7f1');rect(cx-len/2+5,-width/2+5,6,width-10,'#ef7264')}
- if(o.shape==='articulated'){let lag=o.lastTurn||0;ctx.save();ctx.translate(-L*.23,0);ctx.rotate(-lag*.28);car(-L*.17,L*.50,B*.98,colorBlend(o.color,'#22333b',.18));ctx.restore();rect(-L*.14,-B*.40,25,B*.80,'#3e454c');for(let i=0;i<6;i++)line(-L*.14+i*4,-B*.40,-L*.14+i*4,B*.40,'#141f25',2);car(L*.19,L*.52,B,o.color)}
+ if(o.shape==='articulated'){const pivot=-L*.07,bend=Math.atan2(Math.sin(o.rearDir-o.dir),Math.cos(o.rearDir-o.dir));ctx.save();ctx.translate(pivot,0);ctx.rotate(bend);car(-L*.25,L*.50,B*.98,colorBlend(o.color,'#22333b',.18));ctx.restore();ctx.save();ctx.translate(pivot,0);ctx.rotate(bend*.5);rect(-12,-B*.40,24,B*.80,'#3e454c');for(let i=0;i<6;i++)line(-10+i*4,-B*.40,-10+i*4,B*.40,'#141f25',2);ctx.restore();car(L*.19,L*.52,B,o.color)}
  else car(0,L,B,o.color);
  if(enemy){ctx.fillStyle='#fff4bb';ctx.font='bold 10px system-ui';ctx.fillText('M',-2,4)}
  else{line(-L*.13,-10,-L*.33,-20,'#343c41',3);line(-L*.13,10,-L*.33,20,'#343c41',3);circle(-L*.33,-20,3,'#c4c9ba');circle(-L*.33,20,3,'#c4c9ba')}
@@ -294,11 +296,11 @@ function render(){if(!player){ctx.setTransform(DPR,0,0,DPR,0,0);rect(0,0,W,H,'#1
 function frame(t){const dt=Math.min(.042,(t-lastFrame)/1000||.016);lastFrame=t;advance(dt);render();requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 function showMenu(){mode='menu';document.querySelectorAll('.overlay').forEach(e=>e.hidden=true);$('startModal').hidden=false;firingMG=firingCannon=false;aimPointer=null;joy.x=joy.y=0;onJoyMove(0,0)}
-function pauseGame(){if(mode==='play'){mode='paused';$('pauseModal').hidden=false;firingMG=firingCannon=false}else if(mode==='paused')resume()}
+function pauseGame(){if(mode==='play'){mode='paused';$('pauseModal').hidden=false;firingMG=firingCannon=false;aimPointer=null}else if(mode==='paused')resume()}
 function resume(){if(mode==='paused'){mode='play';$('pauseModal').hidden=true}}
 $('pauseBtn').addEventListener('click',pauseGame);$('resumeBtn').addEventListener('click',resume);$('restartBtn').addEventListener('click',showMenu);$('againBtn').addEventListener('click',showMenu);
 $('startBtn').addEventListener('click',startGame);$('repairBtn').addEventListener('click',repair);$('supplyBtn').addEventListener('click',supply);
-$('mapBtn').addEventListener('click',()=>{if(mode==='play'){mode='map';$('mapModal').hidden=false;firingMG=firingCannon=false;drawMap()}});
+$('mapBtn').addEventListener('click',()=>{if(mode==='play'){mode='map';$('mapModal').hidden=false;firingMG=firingCannon=false;aimPointer=null;drawMap()}});
 $('mapClose').addEventListener('click',()=>{if(mode==='map'){mode='play';$('mapModal').hidden=true}});
 function drawMap(){let c=$('mapCanvas'),cc=c.getContext('2d');cc.fillStyle='#25392f';cc.fillRect(0,0,620,330);for(const x of XROADS){cc.fillStyle='#5b696c';cc.fillRect(x/WORLD.w*620-6,0,12,330)}for(const y of YROADS){cc.fillStyle='#5b696c';cc.fillRect(0,y/WORLD.h*330-6,620,12)}for(const b of buildings)if(!b.dead){cc.fillStyle='#66766d';cc.fillRect(b.x/WORLD.w*620,b.y/WORLD.h*330,Math.max(1,b.w/WORLD.w*620),Math.max(1,b.h/WORLD.h*330))}
  cc.fillStyle='#e6c273';cc.fillRect(3750/WORLD.w*620,1060/WORLD.h*330,300/WORLD.w*620,300/WORLD.h*330);
@@ -310,12 +312,11 @@ joyel.addEventListener('pointerdown',e=>{e.preventDefault();joystickID=e.pointer
 joyel.addEventListener('pointermove',e=>{if(joystickID===e.pointerId)joyUpdate(e)});
 function joyEnd(e){if(joystickID===e.pointerId){joystickID=null;onJoyMove(0,0)}}
 joyel.addEventListener('pointerup',joyEnd);joyel.addEventListener('pointercancel',joyEnd);joyel.addEventListener('lostpointercapture',joyEnd);
-function bindHold(id,onChange){const el=$(id);const down=e=>{e.preventDefault();el.setPointerCapture(e.pointerId);onChange(true);el.classList.add('pressed')};const up=e=>{e.preventDefault();onChange(false);el.classList.remove('pressed')};el.addEventListener('pointerdown',down);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('lostpointercapture',up)}
-bindHold('mg',v=>firingMG=v);bindHold('cannon',v=>firingCannon=v);
 function aimAt(x,y){if(!player||mode!=='play')return;let wx=(x-W/2)/zoom+cam.x,wy=(y-H/2)/zoom+cam.y;let a=Math.atan2(wy-player.y,wx-player.x);if(Number.isFinite(a))player.turret=a}
-canvas.addEventListener('pointerdown',e=>{if(mode!=='play')return;aimPointer=e.pointerId;canvas.setPointerCapture(e.pointerId);aimAt(e.clientX,e.clientY);if(e.pointerType==='mouse'&&e.button===0)firingMG=true;if(e.pointerType==='mouse'&&e.button===2)firingCannon=true});
+canvas.addEventListener('pointerdown',e=>{if(mode!=='play'||aimPointer!==null)return;e.preventDefault();aimPointer=e.pointerId;canvas.setPointerCapture(e.pointerId);aimAt(e.clientX,e.clientY);firingMG=firingCannon=true;fireShot(player,'mg');fireShot(player,'cannon')});
 canvas.addEventListener('pointermove',e=>{if(mode!=='play')return;if(e.pointerType==='mouse'||aimPointer===e.pointerId)aimAt(e.clientX,e.clientY)});
-canvas.addEventListener('pointerup',e=>{if(aimPointer===e.pointerId)aimPointer=null;if(e.pointerType==='mouse')firingMG=firingCannon=false});canvas.addEventListener('pointercancel',e=>{if(aimPointer===e.pointerId)aimPointer=null;firingMG=firingCannon=false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
+function stopAim(e){if(aimPointer!==e.pointerId)return;aimPointer=null;firingMG=firingCannon=false}
+canvas.addEventListener('pointerup',stopAim);canvas.addEventListener('pointercancel',stopAim);canvas.addEventListener('lostpointercapture',stopAim);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();if(!e.repeat){if(e.key==='Escape')pauseGame();if(e.key.toLowerCase()==='r')repair();if(e.key.toLowerCase()==='v')supply();if(e.key.toLowerCase()==='m'&&mode==='play')$('mapBtn').click()}});window.addEventListener('keyup',e=>keys[e.key]=false);window.addEventListener('blur',()=>{keys={};firingMG=firingCannon=false;if(mode==='play')pauseGame()});
 function tinySvg(spec){const n=spec.len>165?2:1;return '<svg viewBox="0 0 160 70" xmlns="http://www.w3.org/2000/svg"><g transform="translate(80 35) rotate(-24)"><rect x="-65" y="-18" width="130" height="36" rx="6" fill="'+spec.color+'" stroke="#203744" stroke-width="3"/>'+(n>1?'<rect x="-8" y="-18" width="15" height="36" fill="#3a4e59"/>':'')+Array.from({length:5},(_,i)=>'<rect x="'+(-49+i*21)+'" y="-12" width="14" height="24" fill="#1e5066"/>').join('')+'<rect x="55" y="-13" width="5" height="26" fill="#d4f9ed"/><circle cx="10" cy="0" r="9" fill="#243849" stroke="#b6c3be" stroke-width="3"/><path d="M 12 0 H 47" stroke="#1f303b" stroke-width="8"/></g></svg>'}
 function renderChoices(){const list=$('choices');list.innerHTML='';CONFIG.forEach((c,i)=>{const el=document.createElement('div');el.className='choice'+(selected===i?' selected':'');el.innerHTML='<div class="busArt">'+tinySvg(c)+'</div><b>'+c.name+'</b><small>'+c.desc+'</small>';el.addEventListener('click',()=>{selected=i;renderChoices()});list.appendChild(el)})}
