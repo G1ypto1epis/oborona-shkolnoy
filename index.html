@@ -96,10 +96,11 @@ const ENEMY_CONFIG={
   missile:{hp:85,speed:85,dmg:62,color:'#aa79a9',length:65,reward:60,armor:1},
   flame:{hp:110,speed:127,dmg:5,color:'#e05e3e',length:60,reward:50,armor:.9},
   quad:{hp:100,speed:105,dmg:6,color:'#c6a24e',length:61,reward:55,armor:.9},
-  heavy:{hp:260,speed:65,dmg:4,color:'#626f78',length:72,reward:70,armor:.3}
+  heavy:{hp:260,speed:65,dmg:4,color:'#626f78',length:72,reward:70,armor:.3},
+  explosive:{hp:140,speed:82,dmg:125,color:'#ba7052',length:72,reward:85,armor:.85}
  };
-const ENEMY_DETAILS={basic:{name:'Обычная маршрутка',weapon:'Ружьё: 9 урона за пулю',cooldown:1.7,range:480},flank:{name:'Быстрая маршрутка',weapon:'Ружьё: 8 урона за пулю; обходит с фланга',cooldown:1.7,range:480},rammer:{name:'Таранная маршрутка',weapon:'Таран: 33 урона, 1,3 с между ударами',cooldown:0,range:47},cannon:{name:'Маршрутка с пушкой',weapon:'Пушка: взрывной урон до 42',cooldown:2.3,range:480},missile:{name:'Маршрутка с ПТУР',weapon:'Управляемая ракета: взрывной урон до 62',cooldown:3.8,range:680},flame:{name:'Маршрутка с огнемётом',weapon:'Огнемёт: 5 урона за частицу',cooldown:.12,range:190},quad:{name:'Маршрутка с четырьмя пулемётами',weapon:'Залп из 4 пуль по 6 урона',cooldown:.42,range:480},heavy:{name:'Тяжело бронированная маршрутка',weapon:'Слабое ружьё: 4 урона',cooldown:2.1,range:480}};
-const TRAFFIC_TYPES=[{name:'Легковой автомобиль',kind:'car',speed:105,len:46,width:23,color:'#8bb0c3'},{name:'Грузовик',kind:'truck',speed:78,len:78,width:31,color:'#ba9c75'},{name:'Фура',kind:'semi',speed:70,len:116,width:32,color:'#b7bbc0'},{name:'Фургон',kind:'van',speed:90,len:61,width:27,color:'#a6b899'},{name:'Автобус',kind:'bus',speed:82,len:105,width:32,color:'#d0c394'}];
+const ENEMY_DETAILS={basic:{name:'Обычная маршрутка',weapon:'Ружьё: 9 урона за пулю',cooldown:1.7,range:480},flank:{name:'Быстрая маршрутка',weapon:'Ружьё: 8 урона за пулю; обходит с фланга',cooldown:1.7,range:480},rammer:{name:'Таранная маршрутка',weapon:'Таран: 33 урона, 1,3 с между ударами',cooldown:0,range:47},cannon:{name:'Маршрутка с пушкой',weapon:'Пушка: взрывной урон до 42',cooldown:2.3,range:480},missile:{name:'Маршрутка с ПТУР',weapon:'Управляемая ракета: взрывной урон до 62',cooldown:3.8,range:680},flame:{name:'Маршрутка с огнемётом',weapon:'Огнемёт: 5 урона за частицу',cooldown:.12,range:190},quad:{name:'Маршрутка с четырьмя пулемётами',weapon:'Залп из 4 пуль по 6 урона',cooldown:.42,range:480},heavy:{name:'Тяжело бронированная маршрутка',weapon:'Слабое ружьё: 4 урона',cooldown:2.1,range:480},explosive:{name:'Фугасная маршрутка',weapon:'Фугасный снаряд: взрыв до 125 урона в радиусе 150',cooldown:3.2,range:520}};
+const TRAFFIC_TYPES=[{name:'Легковой автомобиль',kind:'car',hp:55,speed:105,len:46,width:23,color:'#8bb0c3'},{name:'Грузовик',kind:'truck',hp:110,speed:78,len:78,width:31,color:'#ba9c75'},{name:'Фура',kind:'semi',hp:150,speed:70,len:116,width:32,color:'#b7bbc0'},{name:'Фургон',kind:'van',hp:75,speed:90,len:61,width:27,color:'#a6b899'},{name:'Автобус',kind:'bus',hp:130,speed:82,len:105,width:32,color:'#d0c394'}];
 let selected=0,mode='menu',player=null,allies=[],enemies=[],traffic=[],shots=[],fx=[],buildings=[],wrecks=[],loot=[],waves=0,waveWait=0,spawnQueue=0,spawnCooldown=0,missionRetreat=false,allyLosses=0,earned=160,kills=0,gameTime=0,clock=0,cam={x:1800,y:1200},zoom=1,W=0,H=0,DPR=1,lastFrame=0,damageFlash=0,noticeTTL=0,keys={},aimPointer=null,joystickID=null,joy={x:0,y:0},firingMG=false,firingCannon=false,stationFlare=0;
 let lastUI=0,hasStarted=false;
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
@@ -133,7 +134,7 @@ function startGame(){let cfg=CONFIG[selected];buildCity();wrecks=[];loot=[];shot
  for(let i=0;i<5;i++){const base=CONFIG[i%4],al=newVehicle({...base,hp:180+65*(i%3),speed:145+10*(i%3),ammo:9999,shells:9999},1450+(i%3)*190,1010+(i>>1)*120,'ally',{dir:Math.PI/2,rearDir:Math.PI/2,mag:9999,shells:9999});allies.push(al)}
  for(let i=0;i<15;i++)spawnTraffic(i);
  document.querySelectorAll('.overlay').forEach(e=>e.hidden=true);mode='play';hasStarted=true;firingMG=firingCannon=false;joy.x=joy.y=0;onJoyMove(0,0);nextWave();toast('ОБОРОНА НАЧАЛАСЬ — ДЕРЖИТЕ ШКОЛЬНУЮ!',3);updateUI(true)}
-function waveSize(wave){return Math.round(2*Math.pow(1.5,wave-1))}
+function waveSize(wave){return 2*Math.pow(2,wave-1)}
 function nextWave(){waves++;spawnQueue=waveSize(waves);spawnCooldown=0;waveWait=3;toast('ВОЛНА '+waves+' — МАРШРУТКИ НАСТУПАЮТ!',2.8)}
 function spawnEnemy(){const side=Math.floor(Math.random()*4),road=side<2?pick(YROADS):pick(XROADS);let p=side===0?{x:-60,y:road}:side===1?{x:WORLD.w+60,y:road}:side===2?{x:road,y:-60}:{x:road,y:WORLD.h+60};const initialDir=[0,Math.PI,Math.PI/2,-Math.PI/2][side];
  const kind=pick(Object.keys(ENEMY_CONFIG));
@@ -154,14 +155,14 @@ function fireEnemy(e,target){if(e.kind==='rammer')return;const d=dist(e,target),
  e.shootCD=ENEMY_DETAILS[e.kind].cooldown;
  const count=e.kind==='quad'?4:1;
  for(let i=0;i<count;i++){const ang=e.turret+rnd(e.kind==='flame'?-.16:-.05,e.kind==='flame'?.16:.05)+(i-(count-1)/2)*.035;
-  const type=e.kind==='cannon'?'enemyCannon':e.kind==='missile'?'missile':e.kind==='flame'?'flame':'enemy';const speed=type==='missile'?300:type==='flame'?270:type==='enemyCannon'?500:460;
-  shots.push({x:e.x+Math.cos(ang)*25,y:e.y+Math.sin(ang)*25,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:type==='missile'?2.9:type==='flame'?.7:1.35,type,damage:e.dmg,source:'enemy',owner:e,target,r:type==='flame'?7:type==='missile'?7:4})}
+  const type=e.kind==='cannon'?'enemyCannon':e.kind==='explosive'?'highExplosive':e.kind==='missile'?'missile':e.kind==='flame'?'flame':'enemy';const speed=type==='missile'?300:type==='flame'?270:type==='highExplosive'?430:type==='enemyCannon'?500:460;
+  shots.push({x:e.x+Math.cos(ang)*25,y:e.y+Math.sin(ang)*25,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:type==='missile'?2.9:type==='flame'?.7:1.35,type,damage:e.dmg,source:'enemy',owner:e,target,r:type==='flame'?7:type==='missile'?7:type==='highExplosive'?9:4})}
 }
 function healNearby(o,dt){if(!o.alive||!o.healRate)return;for(const ally of [player,...allies])if(ally!==o&&ally.alive&&dist(o,ally)<o.healRadius&&ally.hp<ally.maxHp){ally.hp=Math.min(ally.maxHp,ally.hp+o.healRate*dt);if(Math.random()<dt*2)makeFX(ally.x,ally.y,'#83ffc0',2,.45)}}
 function makeFX(x,y,color,n=7,scale=1){for(let i=0;i<n&&fx.length<240;i++){let ang=rnd(0,TAU),speed=rnd(20,170)*scale,life=rnd(.22,.75);fx.push({x,y,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,ttl:life,max:life,r:rnd(2,6)*scale,color})}}
 function explosion(x,y,r=58,damage=0,source='neutral'){
  makeFX(x,y,'#ffa744',20,1.6);makeFX(x,y,'#545e63',12,1.1);fx.push({x,y,vx:0,vy:0,ttl:.32,max:.32,r:r*.48,color:'#ffc76d',ring:true});
- if(damage){const targets=source==='enemy'?[player,...allies]:enemies;
+ if(damage){const targets=source==='enemy'?[player,...allies,...traffic]:[...enemies,...traffic];
   for(const o of targets)if(o.alive){let d=Math.hypot(o.x-x,o.y-y);if(d<r+25)hurt(o,Math.round(damage*clamp(1-d/(r+25),.12,1)),source)}
   for(const b of buildings){if(!b.dead&&buildingParts(b).some(part=>circleHitsPart(x,y,r,part)))damageBuilding(b,damage*.52)}
  }}
@@ -207,7 +208,7 @@ function chooseRoadGoal(e){
 }
 function recoverToRoad(e){let candidates=[];for(const x of XROADS)for(const y of YROADS){if(!hitsBuilding(x,y,24))candidates.push({x,y})}if(!candidates.length)return;let best=candidates[0],d=Infinity;for(const c of candidates){const n=dist(e,c);if(n<d){d=n;best=c}}e.x=best.x;e.y=best.y;e.prevX=e.x;e.prevY=e.y;e.roadGoal={...best};e.roadAxis=Math.random()<.5?'x':'y';e.roadSign=Math.random()<.5?-1:1;e.navMode='road';e.roadGrace=2;e.stuckTime=0;chooseRoadGoal(e)}
 function driveRoad(e,dt){if(!e.roadGoal){recoverToRoad(e);return}const dx=e.roadGoal.x-e.x,dy=e.roadGoal.y-e.y;if(Math.hypot(dx,dy)<Math.max(14,e.speed*dt*1.5)){e.x=e.roadGoal.x;e.y=e.roadGoal.y;e.prevX=e.x;e.prevY=e.y;chooseRoadGoal(e)}const beforeX=e.x,beforeY=e.y;e.dir=Math.atan2(e.roadGoal.y-e.y,e.roadGoal.x-e.x);move(e,e.roadGoal.x-e.x,e.roadGoal.y-e.y,dt);if(Math.hypot(e.x-beforeX,e.y-beforeY)<e.speed*dt*.12)e.stuckTime+=dt;else e.stuckTime=Math.max(0,e.stuckTime-dt*2);if(e.stuckTime>1.8)recoverToRoad(e)}
-function spawnTraffic(i){const spec=TRAFFIC_TYPES[i%TRAFFIC_TYPES.length],x=pick(XROADS),y=pick(YROADS),axis=Math.random()<.5?'x':'y',sign=Math.random()<.5?-1:1;const o={...spec,x,y,prevX:x,prevY:y,dir:axis==='x'?(sign>0?0:Math.PI):(sign>0?Math.PI/2:-Math.PI/2),side:'neutral',alive:true,roadGoal:{x,y},roadAxis:axis,roadSign:sign,stuckTime:0};chooseRoadGoal(o);traffic.push(o)}
+function spawnTraffic(i){const spec=TRAFFIC_TYPES[i%TRAFFIC_TYPES.length],x=pick(XROADS),y=pick(YROADS),axis=Math.random()<.5?'x':'y',sign=Math.random()<.5?-1:1;const o={...spec,x,y,prevX:x,prevY:y,dir:axis==='x'?(sign>0?0:Math.PI):(sign>0?Math.PI/2:-Math.PI/2),side:'neutral',alive:true,maxHp:spec.hp,armor:1,roadGoal:{x,y},roadAxis:axis,roadSign:sign,stuckTime:0};chooseRoadGoal(o);traffic.push(o)}
 function drawTraffic(o){if(!viewable(o.x,o.y,o.len+30,o.len+30))return;ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.dir);const L=o.len,B=o.width;rect(-L/2+4,-B/2+4,L,B,'#18242799');ctx.fillStyle=o.color;ctx.beginPath();ctx.roundRect(-L/2,-B/2,L,B,5);ctx.fill();ctx.strokeStyle='#253b43';ctx.lineWidth=2;ctx.strokeRect(-L/2+2,-B/2+2,L-4,B-4);
  if(o.kind==='semi'){rect(-L/2+4,-B/2+4,L*.66,B-8,'#d6d6ca');rect(L*.19,-B/2+4,L*.19,B-8,'#557585')}
  else if(o.kind==='truck'){rect(-L/2+5,-B/2+4,L*.56,B-8,'#9b8063');rect(L*.18,-B/2+4,L*.20,B-8,'#557585')}
@@ -215,7 +216,7 @@ function drawTraffic(o){if(!viewable(o.x,o.y,o.len+30,o.len+30))return;ctx.save(
  else{rect(-L*.13,-B/2+4,L*.3,B-8,'#3b6071');rect(L*.24,-B/2+4,L*.10,B-8,'#a9d2d8')}
  for(const side of [-1,1]){rect(-L*.3,side*(B/2)-3,L*.13,6,'#1a242b');rect(L*.22,side*(B/2)-3,L*.13,6,'#1a242b')}rect(L/2-4,-B/2+4,3,B-8,'#fff0b1');ctx.restore()}
 function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0,damageFlash-dt*.4);
- for(const car of traffic)driveRoad(car,dt);
+ for(const car of traffic)if(car.alive)driveRoad(car,dt);
  if(noticeTTL>0){noticeTTL-=dt;if(noticeTTL<=0)$('msg').style.opacity='0'}
  if(missionRetreat&&dist(player,STATION)<STATION.r+35){finish(true);return}
  const jx=joy.x+(keys['a']||keys['ArrowLeft']?-1:0)+(keys['d']||keys['ArrowRight']?1:0),jy=joy.y+(keys['w']||keys['ArrowUp']?-1:0)+(keys['s']||keys['ArrowDown']?1:0);
@@ -236,7 +237,7 @@ function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0
   if(e.navMode==='road'&&inside&&e.roadGrace<=0&&d<360)e.navMode='combat';
   if(e.navMode==='road')driveRoad(e,dt);
   else{if(e.kind==='flank'&&d>100){let phi=Math.atan2(dy,dx)+e.flankSign*.57;dx=Math.cos(phi)*d;dy=Math.sin(phi)*d}
-   if((e.kind==='heavy'||e.kind==='cannon'||e.kind==='missile')&&d<(e.kind==='missile'?430:250)){dx=dy=0}
+   if((e.kind==='heavy'||e.kind==='cannon'||e.kind==='missile'||e.kind==='explosive')&&d<(e.kind==='missile'?430:250)){dx=dy=0}
    const oldX=e.x,oldY=e.y;move(e,dx,dy,dt,e.kind==='rammer'&&d<430?1.23:1);
    if(Math.hypot(dx,dy)>1&&Math.hypot(e.x-oldX,e.y-oldY)<e.speed*dt*.12)e.stuckTime=(e.stuckTime||0)+dt;else e.stuckTime=Math.max(0,(e.stuckTime||0)-dt*2);
    if(e.stuckTime>1.8)recoverToRoad(e)}
@@ -246,16 +247,16 @@ function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0
  for(let i=shots.length-1;i>=0;i--){let s=shots[i];s.ttl-=dt;if(s.type==='missile'&&s.target&&s.target.alive){const a=Math.atan2(s.vy,s.vx),goal=angle(s,s.target),delta=Math.atan2(Math.sin(goal-a),Math.cos(goal-a)),next=a+clamp(delta,-1.5*dt,1.5*dt),sp=Math.hypot(s.vx,s.vy);s.vx=Math.cos(next)*sp;s.vy=Math.sin(next)*sp} s.x+=s.vx*dt;s.y+=s.vy*dt;
   if(s.ttl<=0||s.x<0||s.x>WORLD.w||s.y<0||s.y>WORLD.h){shots.splice(i,1);continue}
   const b=hitsBuilding(s.x,s.y,s.r);
-  if(b){const explosive=['cannon','enemyCannon','missile'].includes(s.type);damageBuilding(b,explosive?80:8);if(explosive)explosion(s.x,s.y,s.type==='missile'?75:93,s.type==='missile'?s.damage:45,s.source);else makeFX(s.x,s.y,s.type==='flame'?'#ff8130':'#cbb78b',4,.5);shots.splice(i,1);continue}
-  const targets=s.source==='enemy'?[player,...allies]:enemies;let hit=null;
+  if(b){const explosive=['cannon','enemyCannon','missile','highExplosive'].includes(s.type);damageBuilding(b,explosive?80:8);if(explosive)explosion(s.x,s.y,s.type==='highExplosive'?150:s.type==='missile'?75:93,s.type==='highExplosive'||s.type==='missile'?s.damage:45,s.source);else makeFX(s.x,s.y,s.type==='flame'?'#ff8130':'#cbb78b',4,.5);shots.splice(i,1);continue}
+  const targets=s.source==='enemy'?[player,...allies,...traffic]:[...enemies,...traffic];let hit=null;
   for(const t of targets)if(t.alive&&dist(s,t)<(s.type==='cannon'?25:21)){hit=t;break}
-  if(hit){if(['cannon','enemyCannon','missile'].includes(s.type))explosion(s.x,s.y,s.type==='missile'?75:100,s.type==='cannon'?85:s.damage,s.source);else{hurt(hit,s.damage,s.source);makeFX(s.x,s.y,s.type==='flame'?'#ff8130':'#ffd598',3,.5)}shots.splice(i,1)}
+  if(hit){if(['cannon','enemyCannon','missile','highExplosive'].includes(s.type))explosion(s.x,s.y,s.type==='highExplosive'?150:s.type==='missile'?75:100,s.type==='cannon'?85:s.damage,s.source);else{hurt(hit,s.damage,s.source);makeFX(s.x,s.y,s.type==='flame'?'#ff8130':'#ffd598',3,.5)}shots.splice(i,1)}
  }
  for(let i=loot.length-1;i>=0;i--){const l=loot[i];l.life-=dt;if(l.life<=0){loot.splice(i,1);continue}if(dist(l,player)<65){earned+=l.value;makeFX(l.x,l.y,'#d5fa89',5,.5);loot.splice(i,1)}}
  for(let i=fx.length-1;i>=0;i--){const p=fx[i];p.ttl-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.975;p.vy*=.975;if(p.ttl<=0)fx.splice(i,1)}
  for(const w of wrecks)w.t+=dt;
  if(!missionRetreat){waveWait-=dt;if(spawnQueue>0){spawnCooldown-=dt;if(spawnCooldown<=0){spawnEnemy();spawnQueue--;spawnCooldown=clamp(.78-waves*.017,.37,.85)}}else if(enemies.every(e=>!e.alive)&&waveWait<=0){nextWave()}}
- enemies=enemies.filter(e=>e.alive);
+ enemies=enemies.filter(e=>e.alive);traffic=traffic.filter(car=>car.alive);
  cam.x+=(player.x-cam.x)*Math.min(1,dt*4);cam.y+=(player.y-cam.y)*Math.min(1,dt*4);
  if(gameTime-lastUI>.11){updateUI();lastUI=gameTime}
 }
@@ -312,7 +313,7 @@ function drawVehicle(o){let x=o.x,y=o.y;if(!viewable(x,y,o.len+40,o.len+40))retu
   rect(cx+len/2-11,-width/2+6,7,width-12,enemy?'#fff0a4':'#a6e7f1');rect(cx-len/2+5,-width/2+5,6,width-10,'#ef7264')}
  if(o.shape==='articulated'){const pivot=-L*.07,bend=Math.atan2(Math.sin(o.rearDir-o.dir),Math.cos(o.rearDir-o.dir));ctx.save();ctx.translate(pivot,0);ctx.rotate(bend);car(-L*.25,L*.50,B*.98,colorBlend(o.color,'#22333b',.18));ctx.restore();ctx.save();ctx.translate(pivot,0);ctx.rotate(bend*.5);rect(-12,-B*.40,24,B*.80,'#3e454c');for(let i=0;i<6;i++)line(-10+i*4,-B*.40,-10+i*4,B*.40,'#141f25',2);ctx.restore();car(L*.19,L*.52,B,o.color)}
  else car(0,L,B,o.color);
- if(enemy){ctx.fillStyle='#fff4bb';ctx.font='bold 10px system-ui';ctx.fillText(({cannon:'П',missile:'ПТУР',flame:'О',quad:'4П',heavy:'Б'}[o.kind]||'М'),-8,4)}
+ if(enemy){ctx.fillStyle='#fff4bb';ctx.font='bold 10px system-ui';ctx.fillText(({cannon:'П',missile:'ПТУР',flame:'О',quad:'4П',heavy:'Б',explosive:'Ф'}[o.kind]||'М'),-8,4)}
  else{line(-L*.13,-10,-L*.33,-20,'#343c41',3);line(-L*.13,10,-L*.33,20,'#343c41',3);circle(-L*.33,-20,3,'#c4c9ba');circle(-L*.33,20,3,'#c4c9ba')}
  ctx.restore();
  // Mounted weapons follow aim; the articulated cannon sits on the rear section.
@@ -333,7 +334,7 @@ function render(){if(!player){ctx.setTransform(DPR,0,0,DPR,0,0);rect(0,0,W,H,'#1
  for(const a of allies)if(a.alive)drawVehicle(a);
  for(const e of enemies)drawVehicle(e);
  if(player.alive)drawVehicle(player);
- for(const s of shots){if(!viewable(s.x,s.y,40,40))continue;let a=Math.atan2(s.vy,s.vx);if(['cannon','enemyCannon','missile','flame'].includes(s.type)){circle(s.x,s.y,s.type==='flame'?7:9,s.type==='missile'?'#d98bff':'#ef8629');circle(s.x,s.y,4,'#ffffb1')}else{line(s.x-Math.cos(a)*9,s.y-Math.sin(a)*9,s.x,s.y,s.source==='enemy'?'#ff8a6c':'#fff3b7',s.source==='enemy'?3:2)}}
+ for(const s of shots){if(!viewable(s.x,s.y,40,40))continue;let a=Math.atan2(s.vy,s.vx);if(['cannon','enemyCannon','missile','highExplosive','flame'].includes(s.type)){circle(s.x,s.y,s.type==='flame'?7:9,s.type==='missile'?'#d98bff':'#ef8629');circle(s.x,s.y,4,'#ffffb1')}else{line(s.x-Math.cos(a)*9,s.y-Math.sin(a)*9,s.x,s.y,s.source==='enemy'?'#ff8a6c':'#fff3b7',s.source==='enemy'?3:2)}}
  for(const p of fx){let alpha=clamp(p.ttl/p.max,0,1);ctx.globalAlpha=alpha;if(p.ring){ctx.strokeStyle=p.color;ctx.lineWidth=4;ctx.beginPath();ctx.arc(p.x,p.y,p.r*(2-alpha),0,TAU);ctx.stroke()}else circle(p.x,p.y,p.r*alpha+.4,p.color);ctx.globalAlpha=1}
  // aiming crosshair in world
  if(player.alive){const ox=player.x+Math.cos(player.turret)*280,oy=player.y+Math.sin(player.turret)*280;outline(ox,oy,14,'#ffe19d',2);line(ox-21,oy,ox-6,oy,'#ffe19d',2);line(ox+6,oy,ox+21,oy,'#ffe19d',2);line(ox,oy-21,ox,oy-6,'#ffe19d',2);line(ox,oy+6,ox,oy+21,'#ffe19d',2)}
@@ -358,7 +359,7 @@ let encyclopediaReturn='menu';
 function renderEncyclopedia(){const fmt=n=>String(n).replace('.',',');const weaponNote=c=>[c.mgCount?c.mgCount+' пулемёт(а): 10 урона за пулю; залп каждые '+fmt(c.mgRate)+' с':'Пулемётов нет',c.hasCannon?'1 пушка: взрыв до 85 урона; каждые '+fmt(c.canonRate)+' с':'Пушки нет',c.healRate?'Лечение других союзников: '+c.healRate+' прочности/с в радиусе '+c.healRadius:''].filter(Boolean).join('<br>');
  const trolley=CONFIG.map(c=>'<article class="entry"><h3>'+c.name+'</h3><p>'+c.desc+'</p><p>Прочность: '+c.hp+' · скорость: '+fmt(c.speed)+'/с<br>Броня: ×'+fmt(c.armor)+' · длина: '+c.len+'</p><p>'+weaponNote(c)+'</p><p>Боезапас: '+c.ammo+' патронов, '+c.shells+' снарядов</p></article>').join('');
  const enemy=Object.entries(ENEMY_CONFIG).map(([kind,c])=>{const d=ENEMY_DETAILS[kind];return '<article class="entry"><h3>'+d.name+'</h3><p>Прочность: '+c.hp+' · скорость: '+c.speed+'/с<br>Броня: ×'+fmt(c.armor)+' · длина: '+c.length+'</p><p>'+d.weapon+'</p><p>Дальность: '+d.range+(d.cooldown?' · интервал: '+fmt(d.cooldown)+' с':'')+'<br>Награда: '+c.reward+' очков</p></article>'}).join('');
- const neutral=TRAFFIC_TYPES.map(c=>'<article class="entry"><h3>'+c.name+'</h3><p>Скорость: '+c.speed+'/с · длина: '+c.len+'</p><p>Без оружия; нейтрален и не участвует в столкновениях и бою.</p></article>').join('');
+ const neutral=TRAFFIC_TYPES.map(c=>'<article class="entry"><h3>'+c.name+'</h3><p>Прочность: '+c.hp+' · скорость: '+c.speed+'/с · длина: '+c.len+'</p><p>Без оружия; нейтрален, может быть уничтожен стрельбой и взрывами. Не препятствует движению.</p></article>').join('');
  $('encyclopediaContent').innerHTML='<h2>Троллейбусы</h2><div class="encyclopedia-grid">'+trolley+'</div><h2>Вражеские маршрутки</h2><div class="encyclopedia-grid">'+enemy+'</div><h2>Нейтральная техника</h2><div class="encyclopedia-grid">'+neutral+'</div>'}
 function openEncyclopedia(from){encyclopediaReturn=from;renderEncyclopedia();$(from==='menu'?'startModal':'pauseModal').hidden=true;$('encyclopediaModal').hidden=false;mode='encyclopedia';firingMG=firingCannon=false;aimPointer=null}
 $('encyclopediaMenuBtn').addEventListener('click',()=>openEncyclopedia('menu'));$('encyclopediaPauseBtn').addEventListener('click',()=>openEncyclopedia('paused'));
