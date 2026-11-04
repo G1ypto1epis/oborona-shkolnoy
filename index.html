@@ -95,24 +95,31 @@ window.addEventListener('resize',resize);resize();
 function toast(text,seconds=2.4){const e=$('msg');e.textContent=text;e.style.opacity='1';noticeTTL=seconds}
 function buildCity(){buildings=[];let seed=17;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
  for(let i=0;i<XROADS.length-1;i++)for(let j=0;j<YROADS.length-1;j++){
-  let lx=XROADS[i]+93,rx=XROADS[i+1]-93,ty=YROADS[j]+92,by=YROADS[j+1]-92;
-  if(rx-lx<160||by-ty<120)continue;
-  const cols=(rx-lx>430?2:1),rows=(by-ty>300?2:1),gap=18;
+  const lx=XROADS[i]+103,rx=XROADS[i+1]-103,ty=YROADS[j]+103,by=YROADS[j+1]-103;
+  if(rx-lx<130||by-ty<100)continue;
+  const cols=rx-lx>430?2:1,rows=by-ty>330?2:1;
   for(let a=0;a<cols;a++)for(let b=0;b<rows;b++){
-   let bx=lx+a*(rx-lx)/cols+12,byy=ty+b*(by-ty)/rows+11;
-   let bw=(rx-lx)/cols-gap-15,bh=(by-ty)/rows-gap-14;
    if(i===4&&j===2&&a===cols-1)continue;
-   buildings.push({x:bx,y:byy,w:bw,h:bh,hp:120+random()*110,maxHp:230,tint:random(),roof:Math.floor(random()*4),dead:false});
+   const cellW=(rx-lx)/cols,cellH=(by-ty)/rows,x=lx+a*cellW+9,y=ty+b*cellH+9,w=cellW-18,h=cellH-18;
+   const shape=['L','U','small','long'][(i*7+j*3+a+b*2)%4];let parts;
+   if(shape==='L'){const t=Math.max(35,Math.min(w,h)*.30);parts=[{x,y,w,h:t},{x,y:y+t,w:t,h:h-t}]}
+   else if(shape==='U'){const t=Math.max(32,Math.min(w,h)*.26);parts=[{x,y,w,h:t},{x,y:y+t,w:t,h:h-t},{x:x+w-t,y:y+t,w:t,h:h-t}]}
+   else if(shape==='small'){const sw=Math.min(90,w*.55),sh=Math.min(85,h*.55);parts=[{x:x+(w-sw)/2,y:y+(h-sh)/2,w:sw,h:sh}]}
+   else{const hh=Math.min(h*.43,75);parts=[{x,y:y+(h-hh)/2,w,h:hh}]}
+   const hp=120+random()*110;buildings.push({x,y,w,h,parts,shape,hp,maxHp:hp,tint:random(),roof:Math.floor(random()*4),dead:false});
   }
  }
 }
+function buildingParts(b){return b.parts||[b]}
+function circleHitsPart(x,y,r,part){const cx=clamp(x,part.x,part.x+part.w),cy=clamp(y,part.y,part.y+part.h);return (cx-x)**2+(cy-y)**2<r*r}
 function newVehicle(spec,x,y,side='ally',extra={}){return {x,y,prevX:x,prevY:y,dir:-Math.PI/2,rearDir:-Math.PI/2,turret:0,side,shape:spec.len>165?'articulated':'single',len:spec.len,color:spec.color,hp:spec.hp,maxHp:spec.hp,speed:spec.speed,armor:spec.armor,mgRate:spec.mgRate,canonRate:spec.canonRate,mgCount:spec.mgCount,hasCannon:spec.hasCannon,healRate:spec.healRate||0,healRadius:spec.healRadius||0,mgCD:0,canonCD:0,mag:spec.ammo??400,shells:spec.shells??30,maxMag:spec.ammo??400,maxShells:spec.shells??30,energy:100,wheel:100,engine:100,wire:100,lastTurn:0,alive:true,think:rnd(.1,1),target:null, ...extra}}
 function startGame(){let cfg=CONFIG[selected];buildCity();wrecks=[];loot=[];shots=[];fx=[];enemies=[];allies=[];waves=0;spawnQueue=0;spawnCooldown=0;waveWait=0;allyLosses=0;earned=160;kills=0;gameTime=0;missionRetreat=false;damageFlash=0;
  player=newVehicle(cfg,1965,1200,'player');player.dir=0;player.rearDir=0;player.turret=0;cam.x=player.x;cam.y=player.y;
  for(let i=0;i<5;i++){const base=CONFIG[i%4],al=newVehicle({...base,hp:180+65*(i%3),speed:145+10*(i%3),ammo:9999,shells:9999},1450+(i%3)*190,1010+(i>>1)*120,'ally',{dir:Math.PI/2,rearDir:Math.PI/2,mag:9999,shells:9999});allies.push(al)}
  document.querySelectorAll('.overlay').forEach(e=>e.hidden=true);mode='play';hasStarted=true;firingMG=firingCannon=false;joy.x=joy.y=0;onJoyMove(0,0);nextWave();toast('ОБОРОНА НАЧАЛАСЬ — ДЕРЖИТЕ ШКОЛЬНУЮ!',3);updateUI(true)}
-function nextWave(){waves++;spawnQueue=clamp(4+waves*3,7,24);spawnCooldown=0;waveWait=3;toast('ВОЛНА '+waves+' — МАРШРУТКИ НАСТУПАЮТ!',2.8)}
-function spawnEnemy(){let sides=[{x:rnd(80,390),y:rnd(900,1460)},{x:rnd(3700,4140),y:rnd(850,1500)},{x:rnd(800,3100),y:210},{x:rnd(850,3300),y:2290}],p=pick(sides);if(dist(p,player)<570)p={x:3820,y:rnd(900,1500)};
+function waveSize(wave){return Math.round(2*Math.pow(1.5,wave-1))}
+function nextWave(){waves++;spawnQueue=waveSize(waves);spawnCooldown=0;waveWait=3;toast('ВОЛНА '+waves+' — МАРШРУТКИ НАСТУПАЮТ!',2.8)}
+function spawnEnemy(){const side=Math.floor(Math.random()*4),road=side<2?pick(YROADS):pick(XROADS);let p=side===0?{x:-60,y:road}:side===1?{x:WORLD.w+60,y:road}:side===2?{x:road,y:-60}:{x:road,y:WORLD.h+60};const initialDir=[0,Math.PI,Math.PI/2,-Math.PI/2][side];
  const kinds=['basic','flank','rammer','cannon','missile','flame','quad','heavy'];const kind=pick(kinds);
  const data={
   basic:{hp:70,speed:106,dmg:9,color:'#e6a15c',length:58,reward:28,armor:1},
@@ -124,7 +131,7 @@ function spawnEnemy(){let sides=[{x:rnd(80,390),y:rnd(900,1460)},{x:rnd(3700,414
   quad:{hp:100,speed:105,dmg:6,color:'#c6a24e',length:61,reward:55,armor:.9},
   heavy:{hp:260,speed:65,dmg:4,color:'#626f78',length:72,reward:70,armor:.3}
  }[kind];
- enemies.push({...p,prevX:p.x,prevY:p.y,dir:0,turret:0,kind,side:'enemy',alive:true,hp:data.hp,maxHp:data.hp,speed:data.speed,dmg:data.dmg,color:data.color,len:data.length,reward:data.reward,shootCD:rnd(.8,2),target:null,ramCD:0,armor:data.armor,flankSign:Math.random()<.5?-1:1})}
+ enemies.push({...p,prevX:p.x,prevY:p.y,dir:initialDir,turret:initialDir,kind,side:'enemy',alive:true,hp:data.hp,maxHp:data.hp,speed:data.speed,dmg:data.dmg,color:data.color,len:data.length,reward:data.reward,shootCD:rnd(.8,2),target:null,ramCD:0,armor:data.armor,flankSign:Math.random()<.5?-1:1,navMode:'road',roadGoal:side===0?{x:XROADS[0],y:road}:side===1?{x:XROADS.at(-1),y:road}:side===2?{x:road,y:YROADS[0]}:{x:road,y:YROADS.at(-1)},roadAxis:side<2?'x':'y',roadSign:(side===0||side===2)?1:-1,stuckTime:0,roadGrace:0})}
 function fireShot(from,type){if(!from.alive)return false;const isPlayer=from===player,mg=type==='mg';
  if(mg){if(!from.mgCount||from.mgCD>0||(isPlayer&&from.mag<=0))return false;from.mgCD=from.mgRate}
  else{if(!from.hasCannon||from.canonCD>0||(isPlayer&&from.shells<=0))return false;from.canonCD=from.canonRate;if(isPlayer)from.shells--}
@@ -149,7 +156,7 @@ function explosion(x,y,r=58,damage=0,source='neutral'){
  makeFX(x,y,'#ffa744',20,1.6);makeFX(x,y,'#545e63',12,1.1);fx.push({x,y,vx:0,vy:0,ttl:.32,max:.32,r:r*.48,color:'#ffc76d',ring:true});
  if(damage){const targets=source==='enemy'?[player,...allies]:enemies;
   for(const o of targets)if(o.alive){let d=Math.hypot(o.x-x,o.y-y);if(d<r+25)hurt(o,Math.round(damage*clamp(1-d/(r+25),.12,1)),source)}
-  for(const b of buildings){if(b.dead)continue;const qx=clamp(x,b.x,b.x+b.w),qy=clamp(y,b.y,b.y+b.h);if(Math.hypot(x-qx,y-qy)<r)damageBuilding(b,damage*.52)}
+  for(const b of buildings){if(!b.dead&&buildingParts(b).some(part=>circleHitsPart(x,y,r,part)))damageBuilding(b,damage*.52)}
  }}
 function damageBuilding(b,d){if(b.dead)return;b.hp-=d;if(b.hp<=0){b.dead=true;makeFX(b.x+b.w/2,b.y+b.h/2,'#84837a',30,2);wrecks.push({x:b.x+b.w/2,y:b.y+b.h/2,t:0,b:true,w:b.w,h:b.h})}}
 function hurt(o,dmg,source){if(!o.alive)return;let amt=dmg*(o.armor||1);o.hp-=amt;if(o===player){damageFlash=Math.min(.45,damageFlash+.16);if(navigator.vibrate&&amt>5)navigator.vibrate(13)}
@@ -169,20 +176,30 @@ function finish(win){if(mode!=='play')return;mode='ended';firingMG=firingCannon=
 function repair(){if(mode!=='play'||!player.alive)return;if(earned<70){toast('Нужно 70 очков снабжения');return}if(player.hp>=player.maxHp&&player.wheel>=98&&player.engine>=98&&player.wire>=98){toast('РЕМОНТ НЕ НУЖЕН');return}earned-=70;player.hp=Math.min(player.maxHp,player.hp+95);player.wheel=Math.min(100,player.wheel+30);player.engine=Math.min(100,player.engine+30);player.wire=Math.min(100,player.wire+30);makeFX(player.x,player.y,'#7bedc6',18,1);toast('РЕМОНТ ВЫПОЛНЕН!')}
 function supply(){if(mode!=='play'||!player.alive)return;if(earned<85){toast('Нужно 85 очков снабжения');return}earned-=85;player.mag+=220;player.shells+=14;player.energy=Math.min(100,player.energy+50);makeFX(player.x,player.y,'#67d9fb',15,1);toast('ПОСТАВКА БОЕПРИПАСОВ!')}
 function nearWire(o){return Math.abs(o.y-1200)<86||Math.abs(o.y-755)<50||XROADS.some(x=>Math.abs(o.x-x)<65)}
-function hitsBuilding(x,y,r){for(let b of buildings)if(!b.dead){const cx=clamp(x,b.x,b.x+b.w),cy=clamp(y,b.y,b.y+b.h);if((cx-x)**2+(cy-y)**2<r*r)return b}return null}
+function hitsBuilding(x,y,r){for(const b of buildings)if(!b.dead&&buildingParts(b).some(part=>circleHitsPart(x,y,r,part)))return b;return null}
 function move(o,dx,dy,dt,mul=1){let speed=o.speed*mul;if(o===player){if(!nearWire(o)){o.energy=Math.max(0,o.energy-dt*4.1);if(o.energy<=0)speed*=.29}else o.energy=Math.min(100,o.energy+dt*10);
   if(o.hp/o.maxHp<.3)speed*=.75;speed*=clamp(o.engine/100,.5,1)}
  if(Math.hypot(dx,dy)<.025)return;
  const desired=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(desired-o.dir),Math.cos(desired-o.dir));o.dir+=clamp(delta,-dt*3,dt*3);
  let magnitude=Math.min(1,Math.hypot(dx,dy)),vx=Math.cos(o.dir)*speed*dt*magnitude,vy=Math.sin(o.dir)*speed*dt*magnitude;
- let nx=clamp(o.x+vx,34,WORLD.w-34),ny=clamp(o.y+vy,34,WORLD.h-34);
+ const margin=o.side==='enemy'?-75:34;let nx=clamp(o.x+vx,margin,WORLD.w-margin),ny=clamp(o.y+vy,margin,WORLD.h-margin);
  const rad=o.side==='enemy'?19:24;
  const b=hitsBuilding(nx,ny,rad);
- if(b){if(!hitsBuilding(o.x+vx,o.y,rad))o.x=nx;else if(!hitsBuilding(o.x,o.y+vy,rad))o.y=ny;else if(o.side==='enemy'&&o.kind==='rammer'){damageBuilding(b,dt*22)}
+ if(b){if(!hitsBuilding(nx,o.y,rad))o.x=nx;else if(!hitsBuilding(o.x,ny,rad))o.y=ny;else if(o.side==='enemy'&&o.kind==='rammer'){damageBuilding(b,dt*22)}
  }else{o.x=nx;o.y=ny}
  if(o.shape==='articulated'){const traveled=Math.hypot(o.x-o.prevX,o.y-o.prevY);const bend=Math.atan2(Math.sin(o.dir-o.rearDir),Math.cos(o.dir-o.rearDir));o.rearDir+=Math.sin(bend)*Math.min(1,traveled/(o.len*.31));const diff=Math.atan2(Math.sin(o.rearDir-o.dir),Math.cos(o.rearDir-o.dir));o.rearDir=o.dir+clamp(diff,-.85,.85)}
  o.prevX=o.x;o.prevY=o.y;
 }
+function chooseRoadGoal(e){
+ const gx=e.roadGoal.x,gy=e.roadGoal.y,xi=XROADS.indexOf(gx),yi=YROADS.indexOf(gy);let options=[];
+ if(xi>=0&&yi>=0){if(xi>0)options.push({x:XROADS[xi-1],y:gy,axis:'x',sign:-1});if(xi<XROADS.length-1)options.push({x:XROADS[xi+1],y:gy,axis:'x',sign:1});if(yi>0)options.push({x:gx,y:YROADS[yi-1],axis:'y',sign:-1});if(yi<YROADS.length-1)options.push({x:gx,y:YROADS[yi+1],axis:'y',sign:1});
+  const straight=options.find(o=>o.axis===e.roadAxis&&o.sign===e.roadSign);let next=straight&&Math.random()<.68?straight:pick(options.filter(o=>!(o.axis===e.roadAxis&&o.sign===-e.roadSign)).length?options.filter(o=>!(o.axis===e.roadAxis&&o.sign===-e.roadSign)):options);e.roadGoal={x:next.x,y:next.y};e.roadAxis=next.axis;e.roadSign=next.sign;return}
+ // The first goal lies at an edge road intersection; continue toward the nearest crossing.
+ if(xi>=0){const candidates=YROADS.filter(y=>e.roadSign>0?y>gy:y<gy);const y=candidates.length?(e.roadSign>0?candidates[0]:candidates.at(-1)):pick(YROADS);e.roadGoal={x:gx,y};e.roadAxis='y';e.roadSign=Math.sign(y-gy)||1}
+ else{const candidates=XROADS.filter(x=>e.roadSign>0?x>gx:x<gx);const x=candidates.length?(e.roadSign>0?candidates[0]:candidates.at(-1)):pick(XROADS);e.roadGoal={x,y:gy};e.roadAxis='x';e.roadSign=Math.sign(x-gx)||1}
+}
+function recoverToRoad(e){let candidates=[];for(const x of XROADS)for(const y of YROADS){if(!hitsBuilding(x,y,24))candidates.push({x,y})}if(!candidates.length)return;let best=candidates[0],d=Infinity;for(const c of candidates){const n=dist(e,c);if(n<d){d=n;best=c}}e.x=best.x;e.y=best.y;e.prevX=e.x;e.prevY=e.y;e.roadGoal={...best};e.roadAxis=Math.random()<.5?'x':'y';e.roadSign=Math.random()<.5?-1:1;e.navMode='road';e.roadGrace=2;e.stuckTime=0;chooseRoadGoal(e)}
+function driveRoad(e,dt){if(!e.roadGoal){recoverToRoad(e);return}const dx=e.roadGoal.x-e.x,dy=e.roadGoal.y-e.y;if(Math.hypot(dx,dy)<Math.max(14,e.speed*dt*1.5)){e.x=e.roadGoal.x;e.y=e.roadGoal.y;e.prevX=e.x;e.prevY=e.y;chooseRoadGoal(e)}const beforeX=e.x,beforeY=e.y;e.dir=Math.atan2(e.roadGoal.y-e.y,e.roadGoal.x-e.x);move(e,e.roadGoal.x-e.x,e.roadGoal.y-e.y,dt);if(Math.hypot(e.x-beforeX,e.y-beforeY)<e.speed*dt*.12)e.stuckTime+=dt;else e.stuckTime=Math.max(0,e.stuckTime-dt*2);if(e.stuckTime>1.8)recoverToRoad(e)}
 function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0,damageFlash-dt*.4);
  if(noticeTTL>0){noticeTTL-=dt;if(noticeTTL<=0)$('msg').style.opacity='0'}
  if(missionRetreat&&dist(player,STATION)<STATION.r+35){finish(true);return}
@@ -199,12 +216,16 @@ function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0
  }
  for(const e of enemies)if(e.alive){e.shootCD=Math.max(0,e.shootCD-dt);e.ramCD=Math.max(0,e.ramCD-dt);
   let t=player,best=dist(e,player);for(const a of allies)if(a.alive){let d=dist(e,a);if(d<best*.88){t=a;best=d}}
-  e.target=t;let dx=t.x-e.x,dy=t.y-e.y;let d=Math.hypot(dx,dy);
-  if(e.kind==='flank'&&d>100){let phi=Math.atan2(dy,dx)+e.flankSign*.57;dx=Math.cos(phi)*d;dy=Math.sin(phi)*d}
-  if((e.kind==='heavy'||e.kind==='cannon'||e.kind==='missile')&&d<(e.kind==='missile'?430:250)){dx=dy=0}
-  move(e,dx,dy,dt,e.kind==='rammer'&&d<430?1.23:1);
-  e.turret=angle(e,t);
-  fireEnemy(e,t);
+  e.target=t;let dx=t.x-e.x,dy=t.y-e.y;let d=Math.hypot(dx,dy);e.roadGrace=Math.max(0,(e.roadGrace||0)-dt);
+  const inside=e.x>=0&&e.x<=WORLD.w&&e.y>=0&&e.y<=WORLD.h;
+  if(e.navMode==='road'&&inside&&e.roadGrace<=0&&d<360)e.navMode='combat';
+  if(e.navMode==='road')driveRoad(e,dt);
+  else{if(e.kind==='flank'&&d>100){let phi=Math.atan2(dy,dx)+e.flankSign*.57;dx=Math.cos(phi)*d;dy=Math.sin(phi)*d}
+   if((e.kind==='heavy'||e.kind==='cannon'||e.kind==='missile')&&d<(e.kind==='missile'?430:250)){dx=dy=0}
+   const oldX=e.x,oldY=e.y;move(e,dx,dy,dt,e.kind==='rammer'&&d<430?1.23:1);
+   if(Math.hypot(dx,dy)>1&&Math.hypot(e.x-oldX,e.y-oldY)<e.speed*dt*.12)e.stuckTime=(e.stuckTime||0)+dt;else e.stuckTime=Math.max(0,(e.stuckTime||0)-dt*2);
+   if(e.stuckTime>1.8)recoverToRoad(e)}
+  e.turret=angle(e,t);if(inside)fireEnemy(e,t);
   if(d<47&&e.ramCD<=0){e.ramCD=1.3;hurt(t,e.kind==='rammer'?33:15,'enemy');hurt(e,e.kind==='rammer'?30:12,'player');makeFX(e.x,e.y,'#fff2c7',9,1)}
  }
  for(let i=shots.length-1;i>=0;i--){let s=shots[i];s.ttl-=dt;if(s.type==='missile'&&s.target&&s.target.alive){const a=Math.atan2(s.vy,s.vx),goal=angle(s,s.target),delta=Math.atan2(Math.sin(goal-a),Math.cos(goal-a)),next=a+clamp(delta,-1.5*dt,1.5*dt),sp=Math.hypot(s.vx,s.vy);s.vx=Math.cos(next)*sp;s.vy=Math.sin(next)*sp} s.x+=s.vx*dt;s.y+=s.vy*dt;
@@ -219,7 +240,7 @@ function advance(dt){if(mode!=='play')return;gameTime+=dt;damageFlash=Math.max(0
  for(let i=fx.length-1;i>=0;i--){const p=fx[i];p.ttl-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.975;p.vy*=.975;if(p.ttl<=0)fx.splice(i,1)}
  for(const w of wrecks)w.t+=dt;
  if(!missionRetreat){waveWait-=dt;if(spawnQueue>0){spawnCooldown-=dt;if(spawnCooldown<=0){spawnEnemy();spawnQueue--;spawnCooldown=clamp(.78-waves*.017,.37,.85)}}else if(enemies.every(e=>!e.alive)&&waveWait<=0){nextWave()}}
- enemies=enemies.filter(e=>e.alive);if(enemies.length>45)enemies=enemies.slice(-45);
+ enemies=enemies.filter(e=>e.alive);
  cam.x+=(player.x-cam.x)*Math.min(1,dt*4);cam.y+=(player.y-cam.y)*Math.min(1,dt*4);
  if(gameTime-lastUI>.11){updateUI();lastUI=gameTime}
 }
@@ -255,11 +276,11 @@ function drawCity(){rect(0,0,WORLD.w,WORLD.h,'#3c5549');
  for(const x of [1050,1800,2550,3300])for(const off of [-24,24])line(x+off,0,x+off,WORLD.h,'#161b1d',2.5);
  for(let x=140;x<WORLD.w;x+=160){line(x,1157,x,1243,'#232d2b',1.5);circle(x,1175,3,'#a6b7b4')}
  for(const b of buildings){if(!viewable(b.x+b.w/2,b.y+b.h/2,b.w/2+40,b.h/2+40))continue;
-  if(b.dead){rect(b.x+7,b.y+8,b.w,b.h,'#323532');rect(b.x+11,b.y+10,b.w-18,b.h-18,'#4b4e48');for(let j=0;j<12;j++){let px=b.x+20+(j*71%(Math.max(30,b.w-40))),py=b.y+20+(j*47%(Math.max(30,b.h-40)));rect(px,py,20,14,j%2?'#6b5c53':'#262b2d')}continue}
-  rect(b.x+8,b.y+10,b.w,b.h,'#1d2929');rect(b.x,b.y,b.w,b.h,b.roof===0?'#56636b':b.roof===1?'#68766d':b.roof===2?'#7b7770':'#626678');
-  ctx.strokeStyle='#bac9c25e';ctx.lineWidth=3;ctx.strokeRect(b.x+3,b.y+3,b.w-6,b.h-6);
-  for(let sx=b.x+18;sx<b.x+b.w-17;sx+=33)for(let sy=b.y+18;sy<b.y+b.h-16;sy+=39)rect(sx,sy,13,17,(Math.floor(sx+sy)%3===0)?'#9caea5':'#3a505a');
-  if(b.hp<90){ctx.strokeStyle='#222d2c';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(b.x+b.w*.3,b.y+5);ctx.lineTo(b.x+b.w*.55,b.y+b.h*.45);ctx.lineTo(b.x+b.w*.78,b.y+b.h*.8);ctx.stroke()}
+  for(const p of buildingParts(b)){if(b.dead){rect(p.x+7,p.y+8,p.w,p.h,'#323532');rect(p.x+4,p.y+4,Math.max(1,p.w-8),Math.max(1,p.h-8),'#4b4e48');continue}
+   rect(p.x+8,p.y+10,p.w,p.h,'#1d2929');rect(p.x,p.y,p.w,p.h,b.roof===0?'#56636b':b.roof===1?'#68766d':b.roof===2?'#7b7770':'#626678');
+   ctx.strokeStyle='#bac9c25e';ctx.lineWidth=3;ctx.strokeRect(p.x+3,p.y+3,p.w-6,p.h-6);
+   for(let sx=p.x+12;sx<p.x+p.w-12;sx+=33)for(let sy=p.y+12;sy<p.y+p.h-12;sy+=39)rect(sx,sy,13,17,(Math.floor(sx+sy)%3===0)?'#9caea5':'#3a505a');
+   if(b.hp<90){ctx.strokeStyle='#222d2c';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x+p.w*.3,p.y+5);ctx.lineTo(p.x+p.w*.65,p.y+p.h*.7);ctx.stroke()}}
  }
  // street names
  ctx.save();ctx.font='bold 33px system-ui';ctx.textAlign='center';ctx.fillStyle='#e5e7c679';for(let x=500;x<4000;x+=980)ctx.fillText('УЛИЦА ШКОЛЬНАЯ',x,1253);ctx.restore();
@@ -321,7 +342,7 @@ $('pauseBtn').addEventListener('click',pauseGame);$('resumeBtn').addEventListene
 $('startBtn').addEventListener('click',startGame);$('repairBtn').addEventListener('click',repair);$('supplyBtn').addEventListener('click',supply);
 $('mapBtn').addEventListener('click',()=>{if(mode==='play'){mode='map';$('mapModal').hidden=false;firingMG=firingCannon=false;aimPointer=null;drawMap()}});
 $('mapClose').addEventListener('click',()=>{if(mode==='map'){mode='play';$('mapModal').hidden=true}});
-function drawMap(){let c=$('mapCanvas'),cc=c.getContext('2d');cc.fillStyle='#25392f';cc.fillRect(0,0,620,330);for(const x of XROADS){cc.fillStyle='#5b696c';cc.fillRect(x/WORLD.w*620-6,0,12,330)}for(const y of YROADS){cc.fillStyle='#5b696c';cc.fillRect(0,y/WORLD.h*330-6,620,12)}for(const b of buildings)if(!b.dead){cc.fillStyle='#66766d';cc.fillRect(b.x/WORLD.w*620,b.y/WORLD.h*330,Math.max(1,b.w/WORLD.w*620),Math.max(1,b.h/WORLD.h*330))}
+function drawMap(){let c=$('mapCanvas'),cc=c.getContext('2d');cc.fillStyle='#25392f';cc.fillRect(0,0,620,330);for(const x of XROADS){cc.fillStyle='#5b696c';cc.fillRect(x/WORLD.w*620-6,0,12,330)}for(const y of YROADS){cc.fillStyle='#5b696c';cc.fillRect(0,y/WORLD.h*330-6,620,12)}for(const b of buildings)if(!b.dead){cc.fillStyle='#66766d';for(const p of buildingParts(b))cc.fillRect(p.x/WORLD.w*620,p.y/WORLD.h*330,Math.max(1,p.w/WORLD.w*620),Math.max(1,p.h/WORLD.h*330))}
  cc.fillStyle='#e6c273';cc.fillRect(3750/WORLD.w*620,1060/WORLD.h*330,300/WORLD.w*620,300/WORLD.h*330);
  for(const e of enemies){cc.fillStyle='#f38071';cc.beginPath();cc.arc(e.x/WORLD.w*620,e.y/WORLD.h*330,3,0,TAU);cc.fill()}for(const a of allies)if(a.alive){cc.fillStyle='#73e2a6';cc.beginPath();cc.arc(a.x/WORLD.w*620,a.y/WORLD.h*330,4,0,TAU);cc.fill()}
  cc.fillStyle='#4beaff';cc.beginPath();cc.arc(player.x/WORLD.w*620,player.y/WORLD.h*330,5,0,TAU);cc.fill();}
