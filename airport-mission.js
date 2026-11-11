@@ -1,4 +1,4 @@
-/* Aerodrome mission rules. The game integration and rendering are still in development. */
+/* Aerodrome mission rules and map. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -64,7 +64,7 @@
   };
 
   MAP.houses = MAP.houseCandidates.filter(h => !MAP.roads.some(r => overlapsRoad(h,r)));
-  const CLOSE_COMBAT = Object.freeze(['basic', 'flank', 'rammer', 'cannon', 'missile', 'flame', 'quad', 'heavy']);
+  const CLOSE_COMBAT = Object.freeze(['basic', 'flank', 'rammer', 'cannon', 'missile', 'flame', 'quad', 'heavy', 'explosive']);
   const ARTILLERY = Object.freeze({ kind: 'artillery', name: 'Артиллерийская маршрутка', hp: 45, armor: 1, range: 1800, minimumDistance: 800, damage: 48, cooldown: 4 });
   const VEHICLES = Object.freeze([
     { id: 'ant', name: 'Муравей модернизированный', role: 'tug', sections: 1, machineGuns: 2, mortars: 0 },
